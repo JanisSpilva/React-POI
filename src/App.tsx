@@ -10,6 +10,21 @@ import {
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
+declare global {
+  interface Window {
+    electronAPI: {
+      loadPOIs: () => Promise<POI[]>;
+      savePOIs: (pois: POI[]) => Promise<void>;
+      saveAttachmentFile: (
+        filePath: string
+      ) => Promise<{
+        name: string;
+        path: string;
+      }>;
+    };
+  }
+}
+
 delete (L.Icon.Default.prototype as any)._getIconUrl;
 
 L.Icon.Default.mergeOptions({
@@ -22,7 +37,7 @@ type Attachment = {
   id: number;
   name: string;
   type: string;
-  dataUrl: string;
+  path: string;
 };
 
 type POI = {
@@ -56,22 +71,8 @@ function MapClickHandler({
 function App() {
   const [selectedMode, setSelectedMode] = useState<"view" | "edit" | null>(null);
   const editMode = selectedMode === "edit";
-  const [pois, setPois] = useState<POI[]>(() => {
-    const savedPois = localStorage.getItem("pois");
-
-    if (savedPois) {
-      return JSON.parse(savedPois).map((poi: POI) => ({
-        ...poi,
-        attachments: poi.attachments || [],
-      }));
-    }
-
-    return [];
-  });
+  const [pois, setPois] = useState<POI[]>([]);
   const [newPoint, setNewPoint] = useState<{ lat: number; lng: number } | null>(null);
-  useEffect(() => {
-    localStorage.setItem("pois", JSON.stringify(pois));
-  }, [pois]);
 
   const categories = Array.from(
     new Set(pois.map((poi) => poi.category).filter(Boolean))
@@ -85,7 +86,7 @@ function App() {
   const [selectedPoi, setSelectedPoi] = useState<POI | null>(null);
   const [fileViewerIndex, setFileViewerIndex] = useState<number | null>(null);
   const [editingPoiId, setEditingPoiId] = useState<number | null>(null);
-
+  const [poisLoaded, setPoisLoaded] = useState(false);
   const viewableFiles = selectedPoi ? selectedPoi.attachments : [];
 
   const filteredPois = pois.filter((poi) => {
@@ -114,6 +115,23 @@ function App() {
       maxZoom: 14,
     });
   }, [searchText, categoryFilter, mapRef, selectedPoi]);
+
+  useEffect(() => {
+    window.electronAPI.loadPOIs().then((loadedPois) => {
+      setPois(loadedPois || []);
+      setPoisLoaded(true);
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!poisLoaded) return;
+
+    window.electronAPI.savePOIs(pois);
+  }, [pois, poisLoaded]);
+
+  function fileUrl(path: string) {
+    return `localfile://${encodeURIComponent(path)}`;
+  }
 
   function handleMapClick(lat: number, lng: number) {
     setNewPoint({ lat, lng });
@@ -169,43 +187,41 @@ function App() {
   }
 
 
-  function addFilesToPoi(files: FileList | null) {
+  async function addFilesToPoi(files: FileList | null) {
     if (!files || !selectedPoi) return;
 
-    Array.from(files).forEach((file) => {
-      const reader = new FileReader();
+    for (const file of Array.from(files)) {
+      const savedFile = await window.electronAPI.saveAttachmentFile(
+        (file as any).path
+      );
 
-      reader.onload = () => {
-        const newAttachment: Attachment = {
-          id: Date.now() + Math.random(),
-          name: file.name,
-          type: file.type,
-          dataUrl: reader.result as string,
-        };
-
-        setPois((prev) =>
-          prev.map((poi) =>
-            poi.id === selectedPoi.id
-              ? {
-                  ...poi,
-                  attachments: [...poi.attachments, newAttachment],
-                }
-              : poi
-          )
-        );
-
-        setSelectedPoi((prev) =>
-          prev
-            ? {
-                ...prev,
-                attachments: [...prev.attachments, newAttachment],
-              }
-            : prev
-        );
+      const newAttachment: Attachment = {
+        id: Date.now() + Math.random(),
+        name: savedFile.name,
+        type: file.type,
+        path: savedFile.path,
       };
 
-      reader.readAsDataURL(file);
-    });
+      setPois((prev) =>
+        prev.map((poi) =>
+          poi.id === selectedPoi.id
+            ? {
+                ...poi,
+                attachments: [...poi.attachments, newAttachment],
+              }
+            : poi
+        )
+      );
+
+      setSelectedPoi((prev) =>
+        prev
+          ? {
+              ...prev,
+              attachments: [...prev.attachments, newAttachment],
+            }
+          : prev
+      );
+    }
   }
 
   function deleteFileFromPoi(fileId: number) {
@@ -490,7 +506,7 @@ function App() {
 
                 {file.type.startsWith("image/") ? (
                   <img
-                    src={file.dataUrl}
+                    src={fileUrl(file.path)}
                     onClick={() => {
                       const fileIndex = viewableFiles.findIndex((item) => item.id === file.id);
                       setFileViewerIndex(fileIndex);
@@ -502,7 +518,7 @@ function App() {
                     }}
                   />
                 ) : (
-                  <a href={file.dataUrl} target="_blank">
+                  <a href={fileUrl(file.path)} target="_blank">
                     Open PDF
                   </a>
                 )}
@@ -542,7 +558,7 @@ function App() {
 
                 {viewableFiles[fileViewerIndex].type.startsWith("image/") ? (
                   <img
-                    src={viewableFiles[fileViewerIndex].dataUrl}
+                    src={fileUrl(viewableFiles[fileViewerIndex].path)}
                     style={{
                       maxWidth: "90vw",
                       maxHeight: "80vh",
@@ -550,7 +566,7 @@ function App() {
                   />
                 ) : viewableFiles[fileViewerIndex].type.startsWith("video/") ? (
                   <video
-                    src={viewableFiles[fileViewerIndex].dataUrl}
+                    src={fileUrl(viewableFiles[fileViewerIndex].path)}
                     controls
                     style={{
                       maxWidth: "90vw",
@@ -559,7 +575,7 @@ function App() {
                   />
                 ) : viewableFiles[fileViewerIndex].type === "application/pdf" ? (
                   <iframe
-                    src={viewableFiles[fileViewerIndex].dataUrl}
+                    src={fileUrl(viewableFiles[fileViewerIndex].path)}
                     style={{
                       width: "90vw",
                       height: "80vh",
@@ -571,7 +587,7 @@ function App() {
                   <div style={{ color: "white", textAlign: "center" }}>
                     <p>This file cannot be previewed directly.</p>
                     <a
-                      href={viewableFiles[fileViewerIndex].dataUrl}
+                      href={viewableFiles[fileViewerIndex].path}
                       download={viewableFiles[fileViewerIndex].name}
                       style={{ color: "white" }}
                     >

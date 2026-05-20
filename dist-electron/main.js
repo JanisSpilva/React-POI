@@ -1,10 +1,39 @@
-import { app, BrowserWindow } from "electron";
-import { createRequire } from "node:module";
+import { app, ipcMain, BrowserWindow, protocol } from "electron";
 import { fileURLToPath } from "node:url";
+import fs from "node:fs";
 import path from "node:path";
-createRequire(import.meta.url);
 const __dirname$1 = path.dirname(fileURLToPath(import.meta.url));
 process.env.APP_ROOT = path.join(__dirname$1, "..");
+const dataFolder = path.join(app.getPath("userData"), "poi-map-data");
+const attachmentsFolder = path.join(dataFolder, "attachments");
+const poiFile = path.join(dataFolder, "pois.json");
+function ensureDataFolders() {
+  if (!fs.existsSync(dataFolder)) fs.mkdirSync(dataFolder);
+  if (!fs.existsSync(attachmentsFolder)) fs.mkdirSync(attachmentsFolder);
+}
+ipcMain.handle("load-pois", () => {
+  ensureDataFolders();
+  if (!fs.existsSync(poiFile)) {
+    return [];
+  }
+  const data = fs.readFileSync(poiFile, "utf-8");
+  return JSON.parse(data);
+});
+ipcMain.handle("save-pois", (_event, pois) => {
+  ensureDataFolders();
+  fs.writeFileSync(poiFile, JSON.stringify(pois, null, 2), "utf-8");
+  return true;
+});
+ipcMain.handle("save-attachment-file", (_event, filePath) => {
+  ensureDataFolders();
+  const fileName = `${Date.now()}-${path.basename(filePath)}`;
+  const destination = path.join(attachmentsFolder, fileName);
+  fs.copyFileSync(filePath, destination);
+  return {
+    name: path.basename(filePath),
+    path: destination
+  };
+});
 const VITE_DEV_SERVER_URL = process.env["VITE_DEV_SERVER_URL"];
 const MAIN_DIST = path.join(process.env.APP_ROOT, "dist-electron");
 const RENDERER_DIST = path.join(process.env.APP_ROOT, "dist");
@@ -37,7 +66,15 @@ app.on("activate", () => {
     createWindow();
   }
 });
-app.whenReady().then(createWindow);
+app.whenReady().then(() => {
+  protocol.registerFileProtocol("localfile", (request, callback) => {
+    const filePath = decodeURIComponent(
+      request.url.replace("localfile://", "")
+    );
+    callback({ path: filePath });
+  });
+  createWindow();
+});
 export {
   MAIN_DIST,
   RENDERER_DIST,
