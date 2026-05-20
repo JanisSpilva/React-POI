@@ -83,8 +83,13 @@ function App() {
   const [categoryFilter, setCategoryFilter] = useState("");
   const [mapRef, setMapRef] = useState<L.Map | null>(null);
   const [selectedPoi, setSelectedPoi] = useState<POI | null>(null);
+  const [fileViewerIndex, setFileViewerIndex] = useState<number | null>(null);
+  const [editingPoiId, setEditingPoiId] = useState<number | null>(null);
+
+  const viewableFiles = selectedPoi ? selectedPoi.attachments : [];
 
   const filteredPois = pois.filter((poi) => {
+
     const matchesSearch =
       poi.name.toLowerCase().includes(searchText.toLowerCase()) ||
       poi.description.toLowerCase().includes(searchText.toLowerCase());
@@ -119,6 +124,27 @@ function App() {
 
   function savePOI() {
     if (!newPoint || !poiName.trim()) return;
+
+    if (editingPoiId !== null) {
+      setPois((prev) =>
+        prev.map((poi) =>
+          poi.id === editingPoiId
+            ? {
+                ...poi,
+                name: poiName,
+                category: poiCategory,
+                description: poiDescription,
+                lat: newPoint.lat,
+                lng: newPoint.lng,
+              }
+            : poi
+        )
+      );
+
+      setEditingPoiId(null);
+      setNewPoint(null);
+      return;
+    }
 
     const newPOI: POI = {
       id: Date.now(),
@@ -320,7 +346,7 @@ function App() {
                 <input
                   type="file"
                   multiple
-                  accept="image/*,.pdf"
+                  accept="image/*,.pdf,.doc,.docx,video/*"
                   onChange={(e) => addFilesToPoi(e.target.files)}
                 />
               </>
@@ -383,7 +409,22 @@ function App() {
                     <br />
                     <br />
 
-                    <button onClick={() => deletePOI(poi.id)}>
+                    <button
+                      onClick={() => {
+                        setEditingPoiId(poi.id);
+                        setNewPoint({ lat: poi.lat, lng: poi.lng });
+                        setPoiName(poi.name);
+                        setPoiCategory(poi.category);
+                        setPoiDescription(poi.description);
+                      }}
+                    >
+                      Edit
+                    </button>
+
+                    <button
+                      onClick={() => deletePOI(poi.id)}
+                      style={{ marginLeft: 8 }}
+                    >
                       Delete
                     </button>
                   </>
@@ -421,7 +462,16 @@ function App() {
                 }}
               >
                 <h4>{file.name}</h4>
-                
+
+                <button
+                  onClick={() => {
+                    const fileIndex = viewableFiles.findIndex((item) => item.id === file.id);
+                    setFileViewerIndex(fileIndex);
+                  }}
+                  style={{ padding: "6px 10px", marginBottom: 10 }}
+                >
+                  Open viewer
+                </button>
                 {editMode && (
                   <button
                     onClick={() => deleteFileFromPoi(file.id)}
@@ -441,9 +491,14 @@ function App() {
                 {file.type.startsWith("image/") ? (
                   <img
                     src={file.dataUrl}
+                    onClick={() => {
+                      const fileIndex = viewableFiles.findIndex((item) => item.id === file.id);
+                      setFileViewerIndex(fileIndex);
+                    }}
                     style={{
                       maxWidth: 500,
                       width: "100%",
+                      cursor: "pointer",
                     }}
                   />
                 ) : (
@@ -453,6 +508,114 @@ function App() {
                 )}
               </div>
             ))}
+
+            {fileViewerIndex !== null && viewableFiles[fileViewerIndex] && (
+              <div
+                style={{
+                  position: "fixed",
+                  inset: 0,
+                  background: "rgba(0,0,0,0.9)",
+                  zIndex: 5000,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexDirection: "column",
+                  padding: "20px 20px 100px 20px",
+                }}
+              >
+                <button
+                  onClick={() => setFileViewerIndex(null)}
+                  style={{
+                    position: "absolute",
+                    top: 20,
+                    right: 20,
+                    padding: 10,
+                    cursor: "pointer",
+                  }}
+                >
+                  Close
+                </button>
+
+                <h3 style={{ color: "white" }}>
+                  {viewableFiles[fileViewerIndex].name}
+                </h3>
+
+                {viewableFiles[fileViewerIndex].type.startsWith("image/") ? (
+                  <img
+                    src={viewableFiles[fileViewerIndex].dataUrl}
+                    style={{
+                      maxWidth: "90vw",
+                      maxHeight: "80vh",
+                    }}
+                  />
+                ) : viewableFiles[fileViewerIndex].type.startsWith("video/") ? (
+                  <video
+                    src={viewableFiles[fileViewerIndex].dataUrl}
+                    controls
+                    style={{
+                      maxWidth: "90vw",
+                      maxHeight: "80vh",
+                    }}
+                  />
+                ) : viewableFiles[fileViewerIndex].type === "application/pdf" ? (
+                  <iframe
+                    src={viewableFiles[fileViewerIndex].dataUrl}
+                    style={{
+                      width: "90vw",
+                      height: "80vh",
+                      background: "white",
+                      border: "none",
+                    }}
+                  />
+                ) : (
+                  <div style={{ color: "white", textAlign: "center" }}>
+                    <p>This file cannot be previewed directly.</p>
+                    <a
+                      href={viewableFiles[fileViewerIndex].dataUrl}
+                      download={viewableFiles[fileViewerIndex].name}
+                      style={{ color: "white" }}
+                    >
+                      Download / Open document
+                    </a>
+                  </div>
+                )}
+
+                <div
+                  style={{
+                    position: "fixed",
+                    bottom: 20,
+                    left: "50%",
+                    transform: "translateX(-50%)",
+                    display: "flex",
+                    gap: 10,
+                    zIndex: 6000,
+                  }}
+                >
+                  <button
+                    onClick={() =>
+                      setFileViewerIndex((prev) =>
+                        prev === null || prev === 0 ? viewableFiles.length - 1 : prev - 1
+                      )
+                    }
+                    style={{ padding: 10, marginRight: 10 }}
+                  >
+                    Previous
+                  </button>
+
+                  <button
+                    onClick={() =>
+                      setFileViewerIndex((prev) =>
+                        prev === null || prev === viewableFiles.length - 1 ? 0 : prev + 1
+                      )
+                    }
+                    style={{ padding: 10 }}
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            )}
+
           </div>
         ) : (
           <>
@@ -470,7 +633,9 @@ function App() {
               width: 280,
             }}
           >
-            <h3 style={{ marginTop: 0 }}>Add new POI</h3>
+            <h3 style={{ marginTop: 0 }}>
+              {editingPoiId !== null ? "Edit POI" : "Add new POI"}
+            </h3>
 
             <input
               value={poiName}
@@ -510,7 +675,13 @@ function App() {
 
             <div style={{ marginTop: 10 }}>
               <button onClick={savePOI}>Save</button>
-              <button onClick={() => setNewPoint(null)} style={{ marginLeft: 8 }}>
+              <button
+                onClick={() => {
+                  setNewPoint(null);
+                  setEditingPoiId(null);
+                }}
+                style={{ marginLeft: 8 }}
+              >
                 Cancel
               </button>
             </div>
