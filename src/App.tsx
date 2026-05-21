@@ -13,6 +13,7 @@ import "leaflet/dist/leaflet.css";
 declare global {
   interface Window {
     electronAPI: {
+      cleanupUnusedFiles: (usedPaths: string[]) => Promise<void>;
       loadPOIs: () => Promise<POI[]>;
       savePOIs: (pois: POI[]) => Promise<void>;
       saveAttachmentFile: (
@@ -21,6 +22,10 @@ declare global {
         name: string;
         path: string;
       }>;
+
+      exportBackup: () => Promise<boolean>;
+
+      importBackup: () => Promise<boolean>;
     };
   }
 }
@@ -129,6 +134,14 @@ function App() {
     window.electronAPI.savePOIs(pois);
   }, [pois, poisLoaded]);
 
+  function cleanupFilesAfterChange(nextPois: POI[]) {
+    const usedPaths = nextPois.flatMap((poi) =>
+      poi.attachments.map((file) => file.path)
+    );
+
+    window.electronAPI.cleanupUnusedFiles(usedPaths);
+  }
+
   function fileUrl(path: string) {
     return `localfile://${encodeURIComponent(path)}`;
   }
@@ -183,7 +196,10 @@ function App() {
 
     if (!confirmDelete) return;
 
-    setPois((prev) => prev.filter((poi) => poi.id !== id));
+    const nextPois = pois.filter((poi) => poi.id !== id);
+
+    setPois(nextPois);
+    cleanupFilesAfterChange(nextPois);
   }
 
 
@@ -231,25 +247,50 @@ function App() {
 
     if (!confirmDelete) return;
 
-    setPois((prev) =>
-      prev.map((poi) =>
-        poi.id === selectedPoi.id
-          ? {
-              ...poi,
-              attachments: poi.attachments.filter((file) => file.id !== fileId),
-            }
-          : poi
-      )
+    const nextPois = pois.map((poi) =>
+      poi.id === selectedPoi.id
+        ? {
+            ...poi,
+            attachments: poi.attachments.filter(
+              (file) => file.id !== fileId
+            ),
+          }
+        : poi
     );
 
-    setSelectedPoi((prev) =>
-      prev
-        ? {
-            ...prev,
-            attachments: prev.attachments.filter((file) => file.id !== fileId),
-          }
-        : prev
+    setPois(nextPois);
+
+    const updatedSelectedPoi =
+      nextPois.find((poi) => poi.id === selectedPoi.id) || null;
+
+    setSelectedPoi(updatedSelectedPoi);
+
+    cleanupFilesAfterChange(nextPois);
+  }
+
+  async function exportBackup() {
+    const success = await window.electronAPI.exportBackup();
+
+    if (success) {
+      alert("Backup exported successfully.");
+    }
+  }
+
+  async function importBackup() {
+    const confirmImport = window.confirm(
+      "Importing a backup will replace current POIs and files. Continue?"
     );
+
+    if (!confirmImport) return;
+
+    const success = await window.electronAPI.importBackup();
+
+    if (success) {
+      const loadedPois = await window.electronAPI.loadPOIs();
+      setPois(loadedPois || []);
+      setSelectedPoi(null);
+      alert("Backup imported successfully.");
+    }
   }
 
   if (!selectedMode) {
@@ -328,6 +369,34 @@ function App() {
           Back to mode select
         </button>
 
+        {editMode && (
+          <>
+            <button
+              onClick={exportBackup}
+              style={{
+                padding: 8,
+                width: "100%",
+                marginBottom: 10,
+                cursor: "pointer",
+              }}
+            >
+              Export backup
+            </button>
+
+            <button
+              onClick={importBackup}
+              style={{
+                padding: 8,
+                width: "100%",
+                marginBottom: 10,
+                cursor: "pointer",
+              }}
+            >
+              Import backup
+            </button>
+          </>
+        )}
+        
         <p style={{ fontSize: 13 }}>
           {editMode
             ? "Edit mode: click on the map to add a new POI."
@@ -508,7 +577,9 @@ function App() {
                   <img
                     src={fileUrl(file.path)}
                     onClick={() => {
-                      const fileIndex = viewableFiles.findIndex((item) => item.id === file.id);
+                      const fileIndex = viewableFiles.findIndex(
+                        (item) => item.id === file.id
+                      );
                       setFileViewerIndex(fileIndex);
                     }}
                     style={{
@@ -517,9 +588,27 @@ function App() {
                       cursor: "pointer",
                     }}
                   />
+                ) : file.type.startsWith("video/") ? (
+                  <video
+                    src={fileUrl(file.path)}
+                    controls
+                    style={{
+                      maxWidth: 500,
+                      width: "100%",
+                    }}
+                  />
+                ) : file.type === "application/pdf" ? (
+                  <iframe
+                    src={fileUrl(file.path)}
+                    style={{
+                      width: "100%",
+                      height: 400,
+                      border: "1px solid #ccc",
+                    }}
+                  />
                 ) : (
                   <a href={fileUrl(file.path)} target="_blank">
-                    Open PDF
+                    Open document
                   </a>
                 )}
               </div>
@@ -587,7 +676,7 @@ function App() {
                   <div style={{ color: "white", textAlign: "center" }}>
                     <p>This file cannot be previewed directly.</p>
                     <a
-                      href={viewableFiles[fileViewerIndex].path}
+                      href={fileUrl(viewableFiles[fileViewerIndex].path)}
                       download={viewableFiles[fileViewerIndex].name}
                       style={{ color: "white" }}
                     >

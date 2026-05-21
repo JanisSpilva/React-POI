@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, protocol } from 'electron'
+import { app, BrowserWindow, ipcMain, protocol, dialog } from 'electron'
 import { fileURLToPath } from 'node:url'
 import fs from 'node:fs'
 import path from 'node:path'
@@ -14,6 +14,64 @@ function ensureDataFolders() {
   if (!fs.existsSync(dataFolder)) fs.mkdirSync(dataFolder);
   if (!fs.existsSync(attachmentsFolder)) fs.mkdirSync(attachmentsFolder);
 }
+
+function copyFolderSync(source: string, target: string) {
+  if (!fs.existsSync(target)) {
+    fs.mkdirSync(target, { recursive: true });
+  }
+
+  for (const item of fs.readdirSync(source)) {
+    const sourcePath = path.join(source, item);
+    const targetPath = path.join(target, item);
+
+    if (fs.statSync(sourcePath).isDirectory()) {
+      copyFolderSync(sourcePath, targetPath);
+    } else {
+      fs.copyFileSync(sourcePath, targetPath);
+    }
+  }
+}
+
+ipcMain.handle("export-backup", async () => {
+  ensureDataFolders();
+
+  const result = await dialog.showOpenDialog({
+    title: "Choose folder to export backup into",
+    properties: ["openDirectory"],
+  });
+
+  if (result.canceled || result.filePaths.length === 0) {
+    return false;
+  }
+
+  const backupFolder = path.join(
+    result.filePaths[0],
+    `poi-map-backup-${Date.now()}`
+  );
+
+  copyFolderSync(dataFolder, backupFolder);
+
+  return true;
+});
+
+ipcMain.handle("import-backup", async () => {
+  const result = await dialog.showOpenDialog({
+    title: "Choose backup folder",
+    properties: ["openDirectory"],
+  });
+
+  if (result.canceled || result.filePaths.length === 0) {
+    return false;
+  }
+
+  ensureDataFolders();
+
+  const selectedFolder = result.filePaths[0];
+
+  copyFolderSync(selectedFolder, dataFolder);
+
+  return true;
+});
 
 ipcMain.handle("load-pois", () => {
   ensureDataFolders();
@@ -45,6 +103,23 @@ ipcMain.handle("save-attachment-file", (_event, filePath: string) => {
     name: path.basename(filePath),
     path: destination,
   };
+});
+
+ipcMain.handle("cleanup-unused-files", (_event, usedPaths: string[]) => {
+  ensureDataFolders();
+
+  const usedSet = new Set(usedPaths);
+  const files = fs.readdirSync(attachmentsFolder);
+
+  for (const file of files) {
+    const fullPath = path.join(attachmentsFolder, file);
+
+    if (!usedSet.has(fullPath)) {
+      fs.unlinkSync(fullPath);
+    }
+  }
+
+  return true;
 });
 
 export const VITE_DEV_SERVER_URL = process.env['VITE_DEV_SERVER_URL']
