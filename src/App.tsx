@@ -76,6 +76,13 @@ function MapClickHandler({
 function App() {
   const [selectedMode, setSelectedMode] = useState<"view" | "edit" | null>(null);
   const editMode = selectedMode === "edit";
+  const categoryOptions = [
+    "Military",
+    "History",
+    "Nature",
+    "City",
+    "Other",
+  ];
   const [pois, setPois] = useState<POI[]>([]);
   const [newPoint, setNewPoint] = useState<{ lat: number; lng: number } | null>(null);
 
@@ -146,6 +153,30 @@ function App() {
     return `localfile://${encodeURIComponent(path)}`;
   }
 
+  function getMarkerColor(category: string) {
+    const normalized = category.toLowerCase();
+
+    if (normalized.includes("military")) return "red";
+    if (normalized.includes("history")) return "blue";
+    if (normalized.includes("nature")) return "green";
+    if (normalized.includes("city")) return "orange";
+
+    return "violet";
+  }
+
+  function createColoredIcon(color: string) {
+    return new L.Icon({
+      iconUrl: `https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-${color}.png`,
+      shadowUrl:
+        "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+
+      iconSize: [25, 41],
+      iconAnchor: [12, 41],
+      popupAnchor: [1, -34],
+      shadowSize: [41, 41],
+    });
+  }
+
   function handleMapClick(lat: number, lng: number) {
     setNewPoint({ lat, lng });
     setPoiName("");
@@ -154,7 +185,7 @@ function App() {
   }
 
   function savePOI() {
-    if (!newPoint || !poiName.trim()) return;
+    if (!newPoint || !poiName.trim() || !poiCategory) return;
 
     if (editingPoiId !== null) {
       setPois((prev) =>
@@ -754,17 +785,24 @@ function App() {
               }}
             />
 
-            <input
+            <select
               value={poiCategory}
               onChange={(e) => setPoiCategory(e.target.value)}
-              placeholder="Category"
               style={{
                 padding: 8,
                 width: "100%",
                 marginBottom: 8,
                 boxSizing: "border-box",
               }}
-            />
+            >
+              <option value="">Select group</option>
+
+              {categoryOptions.map((category) => (
+                <option key={category} value={category}>
+                  {category}
+                </option>
+              ))}
+            </select>
 
             <textarea
               value={poiDescription}
@@ -807,7 +845,11 @@ function App() {
           <MapClickHandler editMode={editMode} onMapClick={handleMapClick} />
           
           {filteredPois.map((poi) => (
-            <Marker key={poi.id} position={[poi.lat, poi.lng]}>
+            <Marker
+              key={poi.id}
+              position={[poi.lat, poi.lng]}
+              icon={createColoredIcon(getMarkerColor(poi.category))}
+            >
               <Popup>
                 <div
                   style={{
