@@ -167,8 +167,8 @@ function App() {
 
   function createColoredIcon(color: string) {
     return new L.Icon({
-      iconUrl: `/marker-icons/marker-icon-${color}.png`,
-      shadowUrl: "/marker-icons/marker-shadow.png",
+      iconUrl: `markericon://marker-icon-${color}.png`,
+      shadowUrl: "markericon://marker-shadow.png",
       iconSize: [25, 41],
       iconAnchor: [12, 41],
       popupAnchor: [1, -34],

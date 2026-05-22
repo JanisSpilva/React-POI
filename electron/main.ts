@@ -170,12 +170,18 @@ app.on('activate', () => {
 })
 
 app.whenReady().then(() => {
-  protocol.registerFileProtocol("localfile", (request, callback) => {
-    const filePath = decodeURIComponent(
-      request.url.replace("localfile://", "")
+  protocol.registerFileProtocol("markericon", (request, callback) => {
+    const iconPath = decodeURIComponent(
+      request.url.replace("markericon://", "")
     );
 
-    callback({ path: filePath });
+    const markerIconsFolder = app.isPackaged
+      ? path.join(process.resourcesPath, "marker-icons")
+      : "C:\\Users\\sairo\\MAP\\latvia-marker-icons";
+
+    const fullPath = path.join(markerIconsFolder, iconPath);
+
+    callback({ path: fullPath });
   });
 
   protocol.registerFileProtocol("offlinetile", (request, callback) => {
@@ -183,12 +189,11 @@ app.whenReady().then(() => {
       request.url.replace("offlinetile://", "")
     );
 
-    const fullPath = path.join(
-      process.env.APP_ROOT,
-      "resources",
-      "offline-tiles",
-      tilePath
-    );
+  const tilesFolder = app.isPackaged
+    ? path.join(process.resourcesPath, "offline-tiles")
+    : "C:\\Users\\sairo\\MAP\\latvia-offline-tiles";
+
+  const fullPath = path.join(tilesFolder, tilePath);
 
     callback({ path: fullPath });
   });
