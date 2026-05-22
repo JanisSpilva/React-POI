@@ -21,10 +21,6 @@ Built using:
 
 ### 🛠️ In Progress / Planned
 
-- SQLite database integration
-- Drag-and-drop file uploads
-- Multi-select filters
-- Polygon and route drawing tools
 - Packaging into installable `.exe`
 
 ---
