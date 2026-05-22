@@ -178,5 +178,20 @@ app.whenReady().then(() => {
     callback({ path: filePath });
   });
 
+  protocol.registerFileProtocol("offlinetile", (request, callback) => {
+    const tilePath = decodeURIComponent(
+      request.url.replace("offlinetile://", "")
+    );
+
+    const fullPath = path.join(
+      process.env.APP_ROOT,
+      "resources",
+      "offline-tiles",
+      tilePath
+    );
+
+    callback({ path: fullPath });
+  });
+
   createWindow();
 });

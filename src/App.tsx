@@ -99,6 +99,7 @@ function App() {
   const [fileViewerIndex, setFileViewerIndex] = useState<number | null>(null);
   const [editingPoiId, setEditingPoiId] = useState<number | null>(null);
   const [poisLoaded, setPoisLoaded] = useState(false);
+  const [offlineMap, setOfflineMap] = useState(false);
   const viewableFiles = selectedPoi ? selectedPoi.attachments : [];
 
   const filteredPois = pois.filter((poi) => {
@@ -124,7 +125,7 @@ function App() {
 
     mapRef.fitBounds(bounds, {
       padding: [50, 50],
-      maxZoom: 14,
+      maxZoom: 16,
     });
   }, [searchText, categoryFilter, mapRef, selectedPoi]);
 
@@ -166,10 +167,8 @@ function App() {
 
   function createColoredIcon(color: string) {
     return new L.Icon({
-      iconUrl: `https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-${color}.png`,
-      shadowUrl:
-        "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
-
+      iconUrl: `/marker-icons/marker-icon-${color}.png`,
+      shadowUrl: "/marker-icons/marker-shadow.png",
       iconSize: [25, 41],
       iconAnchor: [12, 41],
       popupAnchor: [1, -34],
@@ -427,7 +426,19 @@ function App() {
             </button>
           </>
         )}
-        
+
+        <button
+          onClick={() => setOfflineMap(!offlineMap)}
+          style={{
+            padding: 8,
+            width: "100%",
+            marginBottom: 10,
+            cursor: "pointer",
+          }}
+        >
+          {offlineMap ? "Use online map" : "Use offline map"}
+        </button>
+
         <p style={{ fontSize: 13 }}>
           {editMode
             ? "Edit mode: click on the map to add a new POI."
@@ -834,12 +845,18 @@ function App() {
         <MapContainer
           ref={setMapRef}
           center={[56.8796, 24.6032]}
-          zoom={7}
+          zoom={8}
+          minZoom={8}
+          maxZoom={16}
           style={{ height: "100%", width: "100%" }}
         >
           <TileLayer
             attribution="&copy; OpenStreetMap contributors"
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            url={
+              offlineMap
+                ? "offlinetile://{z}/{x}/{y}.png"
+                : "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            }
           />
 
           <MapClickHandler editMode={editMode} onMapClick={handleMapClick} />
