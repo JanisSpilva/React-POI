@@ -1,1 +1,11 @@
-"use strict";const e=require("electron");e.contextBridge.exposeInMainWorld("electronAPI",{saveAttachmentFile:i=>e.ipcRenderer.invoke("save-attachment-file",i),loadPOIs:()=>e.ipcRenderer.invoke("load-pois"),savePOIs:i=>e.ipcRenderer.invoke("save-pois",i),cleanupUnusedFiles:i=>e.ipcRenderer.invoke("cleanup-unused-files",i),exportBackup:()=>e.ipcRenderer.invoke("export-backup"),importBackup:()=>e.ipcRenderer.invoke("import-backup"),openFile:i=>e.ipcRenderer.invoke("open-file",i)});
+"use strict";
+const electron = require("electron");
+electron.contextBridge.exposeInMainWorld("electronAPI", {
+  saveAttachmentFile: (filePath) => electron.ipcRenderer.invoke("save-attachment-file", filePath),
+  loadPOIs: () => electron.ipcRenderer.invoke("load-pois"),
+  savePOIs: (pois) => electron.ipcRenderer.invoke("save-pois", pois),
+  cleanupUnusedFiles: (usedPaths) => electron.ipcRenderer.invoke("cleanup-unused-files", usedPaths),
+  exportBackup: () => electron.ipcRenderer.invoke("export-backup"),
+  importBackup: () => electron.ipcRenderer.invoke("import-backup"),
+  openFile: (filePath) => electron.ipcRenderer.invoke("open-file", filePath)
+});

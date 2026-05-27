@@ -38,7 +38,7 @@
     "appId": "com.latvia.poimap",
     "productName": "Latvia POI Map",
     "directories": {
-      "output": "release"
+      "output": "../release"
     },
     "files": [
       "dist",
