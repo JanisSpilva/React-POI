@@ -21,7 +21,7 @@ Built using:
 
 ### 🛠️ In Progress / Planned
 
-- Packaging into installable `.exe`
+- Translation to Latvian
 
 ---
 
@@ -62,7 +62,7 @@ To improve startup speed and reduce application load times:
 | Leaflet | Interactive maps |
 | React Leaflet | React integration for Leaflet |
 | QGIS | Tile generation & GIS workflow |
-| SQLite *(planned)* | Local database storage |
+| Import/Export | Local database storage |
 
 ---
 
@@ -72,8 +72,8 @@ To improve startup speed and reduce application load times:
 |---|---|
 | Offline maps | ✅ Completed |
 | Backup system | ✅ Completed |
-| Windows installer | 🚧 Planned |
-
+| Windows installer | ✅ Completed |
+| Translation to Latvian | 🚧 Planned |
 ---
 
 ## 📦 Getting Started
