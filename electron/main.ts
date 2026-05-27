@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, protocol, dialog } from 'electron'
+import { app, BrowserWindow, ipcMain, protocol, shell, dialog } from 'electron'
 import { fileURLToPath } from 'node:url'
 import fs from 'node:fs'
 import path from 'node:path'
@@ -122,6 +122,11 @@ ipcMain.handle("cleanup-unused-files", (_event, usedPaths: string[]) => {
   return true;
 });
 
+ipcMain.handle("open-file", async (_event, filePath: string) => {
+  await shell.openPath(filePath);
+  return true;
+});
+
 export const VITE_DEV_SERVER_URL = process.env['VITE_DEV_SERVER_URL']
 export const MAIN_DIST = path.join(process.env.APP_ROOT, 'dist-electron')
 export const RENDERER_DIST = path.join(process.env.APP_ROOT, 'dist')
@@ -132,13 +137,18 @@ let win: BrowserWindow | null
 
 function createWindow() {
   win = new BrowserWindow({
+    width: 1600,
+    height: 1000,
+    autoHideMenuBar: true,
     icon: path.join(process.env.VITE_PUBLIC, 'electron-vite.svg'),
+
     webPreferences: {
       preload: path.join(__dirname, 'preload.mjs'),
     },
   })
 
-  // Test active push message to Renderer-process.
+  win.maximize();
+
   win.webContents.on('did-finish-load', () => {
     win?.webContents.send('main-process-message', (new Date).toLocaleString())
   })
@@ -170,6 +180,13 @@ app.on('activate', () => {
 })
 
 app.whenReady().then(() => {
+  protocol.registerFileProtocol("localfile", (request, callback) => {
+    const filePath = decodeURIComponent(
+      request.url.replace("localfile://", "")
+    );
+
+    callback({ path: filePath });
+  });
   protocol.registerFileProtocol("markericon", (request, callback) => {
     const iconPath = decodeURIComponent(
       request.url.replace("markericon://", "")

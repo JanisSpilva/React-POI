@@ -14,4 +14,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   exportBackup: () => ipcRenderer.invoke("export-backup"),
 
   importBackup: () => ipcRenderer.invoke("import-backup"),
+
+  openFile: (filePath: string) =>
+    ipcRenderer.invoke("open-file", filePath),
 });

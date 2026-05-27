@@ -1,147 +1,112 @@
-import { app, ipcMain, dialog, BrowserWindow, protocol } from "electron";
-import { fileURLToPath } from "node:url";
-import fs from "node:fs";
-import path from "node:path";
-const __dirname$1 = path.dirname(fileURLToPath(import.meta.url));
-process.env.APP_ROOT = path.join(__dirname$1, "..");
-const dataFolder = path.join(app.getPath("userData"), "poi-map-data");
-const attachmentsFolder = path.join(dataFolder, "attachments");
-const poiFile = path.join(dataFolder, "pois.json");
-function ensureDataFolders() {
-  if (!fs.existsSync(dataFolder)) fs.mkdirSync(dataFolder);
-  if (!fs.existsSync(attachmentsFolder)) fs.mkdirSync(attachmentsFolder);
+import { app as c, ipcMain as l, dialog as S, shell as R, BrowserWindow as w, protocol as u } from "electron";
+import { fileURLToPath as g } from "node:url";
+import t from "node:fs";
+import n from "node:path";
+const j = n.dirname(g(import.meta.url));
+process.env.APP_ROOT = n.join(j, "..");
+const p = n.join(c.getPath("userData"), "poi-map-data"), f = n.join(p, "attachments"), h = n.join(p, "pois.json");
+function d() {
+  t.existsSync(p) || t.mkdirSync(p), t.existsSync(f) || t.mkdirSync(f);
 }
-function copyFolderSync(source, target) {
-  if (!fs.existsSync(target)) {
-    fs.mkdirSync(target, { recursive: true });
-  }
-  for (const item of fs.readdirSync(source)) {
-    const sourcePath = path.join(source, item);
-    const targetPath = path.join(target, item);
-    if (fs.statSync(sourcePath).isDirectory()) {
-      copyFolderSync(sourcePath, targetPath);
-    } else {
-      fs.copyFileSync(sourcePath, targetPath);
-    }
+function P(o, e) {
+  t.existsSync(e) || t.mkdirSync(e, { recursive: !0 });
+  for (const i of t.readdirSync(o)) {
+    const r = n.join(o, i), a = n.join(e, i);
+    t.statSync(r).isDirectory() ? P(r, a) : t.copyFileSync(r, a);
   }
 }
-ipcMain.handle("export-backup", async () => {
-  ensureDataFolders();
-  const result = await dialog.showOpenDialog({
+l.handle("export-backup", async () => {
+  d();
+  const o = await S.showOpenDialog({
     title: "Choose folder to export backup into",
     properties: ["openDirectory"]
   });
-  if (result.canceled || result.filePaths.length === 0) {
-    return false;
-  }
-  const backupFolder = path.join(
-    result.filePaths[0],
+  if (o.canceled || o.filePaths.length === 0)
+    return !1;
+  const e = n.join(
+    o.filePaths[0],
     `poi-map-backup-${Date.now()}`
   );
-  copyFolderSync(dataFolder, backupFolder);
-  return true;
+  return P(p, e), !0;
 });
-ipcMain.handle("import-backup", async () => {
-  const result = await dialog.showOpenDialog({
+l.handle("import-backup", async () => {
+  const o = await S.showOpenDialog({
     title: "Choose backup folder",
     properties: ["openDirectory"]
   });
-  if (result.canceled || result.filePaths.length === 0) {
-    return false;
-  }
-  ensureDataFolders();
-  const selectedFolder = result.filePaths[0];
-  copyFolderSync(selectedFolder, dataFolder);
-  return true;
+  if (o.canceled || o.filePaths.length === 0)
+    return !1;
+  d();
+  const e = o.filePaths[0];
+  return P(e, p), !0;
 });
-ipcMain.handle("load-pois", () => {
-  ensureDataFolders();
-  if (!fs.existsSync(poiFile)) {
+l.handle("load-pois", () => {
+  if (d(), !t.existsSync(h))
     return [];
-  }
-  const data = fs.readFileSync(poiFile, "utf-8");
-  return JSON.parse(data);
+  const o = t.readFileSync(h, "utf-8");
+  return JSON.parse(o);
 });
-ipcMain.handle("save-pois", (_event, pois) => {
-  ensureDataFolders();
-  fs.writeFileSync(poiFile, JSON.stringify(pois, null, 2), "utf-8");
-  return true;
-});
-ipcMain.handle("save-attachment-file", (_event, filePath) => {
-  ensureDataFolders();
-  const fileName = `${Date.now()}-${path.basename(filePath)}`;
-  const destination = path.join(attachmentsFolder, fileName);
-  fs.copyFileSync(filePath, destination);
-  return {
-    name: path.basename(filePath),
-    path: destination
+l.handle("save-pois", (o, e) => (d(), t.writeFileSync(h, JSON.stringify(e, null, 2), "utf-8"), !0));
+l.handle("save-attachment-file", (o, e) => {
+  d();
+  const i = `${Date.now()}-${n.basename(e)}`, r = n.join(f, i);
+  return t.copyFileSync(e, r), {
+    name: n.basename(e),
+    path: r
   };
 });
-ipcMain.handle("cleanup-unused-files", (_event, usedPaths) => {
-  ensureDataFolders();
-  const usedSet = new Set(usedPaths);
-  const files = fs.readdirSync(attachmentsFolder);
-  for (const file of files) {
-    const fullPath = path.join(attachmentsFolder, file);
-    if (!usedSet.has(fullPath)) {
-      fs.unlinkSync(fullPath);
-    }
+l.handle("cleanup-unused-files", (o, e) => {
+  d();
+  const i = new Set(e), r = t.readdirSync(f);
+  for (const a of r) {
+    const y = n.join(f, a);
+    i.has(y) || t.unlinkSync(y);
   }
-  return true;
+  return !0;
 });
-const VITE_DEV_SERVER_URL = process.env["VITE_DEV_SERVER_URL"];
-const MAIN_DIST = path.join(process.env.APP_ROOT, "dist-electron");
-const RENDERER_DIST = path.join(process.env.APP_ROOT, "dist");
-process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL ? path.join(process.env.APP_ROOT, "public") : RENDERER_DIST;
-let win;
-function createWindow() {
-  win = new BrowserWindow({
-    icon: path.join(process.env.VITE_PUBLIC, "electron-vite.svg"),
+l.handle("open-file", async (o, e) => (await R.openPath(e), !0));
+const m = process.env.VITE_DEV_SERVER_URL, I = n.join(process.env.APP_ROOT, "dist-electron"), _ = n.join(process.env.APP_ROOT, "dist");
+process.env.VITE_PUBLIC = m ? n.join(process.env.APP_ROOT, "public") : _;
+let s;
+function v() {
+  s = new w({
+    width: 1600,
+    height: 1e3,
+    autoHideMenuBar: !0,
+    icon: n.join(process.env.VITE_PUBLIC, "electron-vite.svg"),
     webPreferences: {
-      preload: path.join(__dirname$1, "preload.mjs")
+      preload: n.join(j, "preload.mjs")
     }
-  });
-  win.webContents.on("did-finish-load", () => {
-    win == null ? void 0 : win.webContents.send("main-process-message", (/* @__PURE__ */ new Date()).toLocaleString());
-  });
-  if (VITE_DEV_SERVER_URL) {
-    win.loadURL(VITE_DEV_SERVER_URL);
-  } else {
-    win.loadFile(path.join(RENDERER_DIST, "index.html"));
-  }
+  }), s.maximize(), s.webContents.on("did-finish-load", () => {
+    s == null || s.webContents.send("main-process-message", (/* @__PURE__ */ new Date()).toLocaleString());
+  }), m ? s.loadURL(m) : s.loadFile(n.join(_, "index.html"));
 }
-app.on("window-all-closed", () => {
-  if (process.platform !== "darwin") {
-    app.quit();
-    win = null;
-  }
+c.on("window-all-closed", () => {
+  process.platform !== "darwin" && (c.quit(), s = null);
 });
-app.on("activate", () => {
-  if (BrowserWindow.getAllWindows().length === 0) {
-    createWindow();
-  }
+c.on("activate", () => {
+  w.getAllWindows().length === 0 && v();
 });
-app.whenReady().then(() => {
-  protocol.registerFileProtocol("markericon", (request, callback) => {
-    const iconPath = decodeURIComponent(
-      request.url.replace("markericon://", "")
+c.whenReady().then(() => {
+  u.registerFileProtocol("localfile", (o, e) => {
+    const i = decodeURIComponent(
+      o.url.replace("localfile://", "")
     );
-    const markerIconsFolder = app.isPackaged ? path.join(process.resourcesPath, "marker-icons") : "C:\\Users\\sairo\\MAP\\latvia-marker-icons";
-    const fullPath = path.join(markerIconsFolder, iconPath);
-    callback({ path: fullPath });
-  });
-  protocol.registerFileProtocol("offlinetile", (request, callback) => {
-    const tilePath = decodeURIComponent(
-      request.url.replace("offlinetile://", "")
-    );
-    const tilesFolder = app.isPackaged ? path.join(process.resourcesPath, "offline-tiles") : "C:\\Users\\sairo\\MAP\\latvia-offline-tiles";
-    const fullPath = path.join(tilesFolder, tilePath);
-    callback({ path: fullPath });
-  });
-  createWindow();
+    e({ path: i });
+  }), u.registerFileProtocol("markericon", (o, e) => {
+    const i = decodeURIComponent(
+      o.url.replace("markericon://", "")
+    ), r = c.isPackaged ? n.join(process.resourcesPath, "marker-icons") : "C:\\Users\\sairo\\MAP\\latvia-marker-icons", a = n.join(r, i);
+    e({ path: a });
+  }), u.registerFileProtocol("offlinetile", (o, e) => {
+    const i = decodeURIComponent(
+      o.url.replace("offlinetile://", "")
+    ), r = c.isPackaged ? n.join(process.resourcesPath, "offline-tiles") : "C:\\Users\\sairo\\MAP\\latvia-offline-tiles", a = n.join(r, i);
+    e({ path: a });
+  }), v();
 });
 export {
-  MAIN_DIST,
-  RENDERER_DIST,
-  VITE_DEV_SERVER_URL
+  I as MAIN_DIST,
+  _ as RENDERER_DIST,
+  m as VITE_DEV_SERVER_URL
 };
