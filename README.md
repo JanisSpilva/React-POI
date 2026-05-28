@@ -1,23 +1,52 @@
-# React + TypeScript + Vite Map Application
+# Latvia POI Map
 
-A desktop-focused mapping application built with **React**, **TypeScript**, and **Vite**, featuring offline maps, spatial tools, and local data storage.
+A desktop-focused offline mapping application built with **React**, **TypeScript**, **Electron**, and **Vite**.
+
+The application is designed for:
+- offline spatial data viewing
+- POI management
+- local file attachments
+- offline tile rendering
+- lightweight desktop deployment
 
 Built using:
 - React Leaflet
-- Leaflet Color Markers
+- Leaflet
+- Electron
 - QGIS
 
 ---
+
+# 🖼️ Screenshots
+
+## Main Map View
+
+![Main Map](./screenshots/map.png)
+
+![Location View](./screenshots/location.png)
+
+![Markers](./screenshots/markers.png)
+
+![Offline Loading](./screenshots/offline-loading.png)
 
 ## ✨ Features
 
 ### ✅ Completed
 
-- Export / import backups
-- Map marker icons and category-based colors
-- Offline map tile support *(Latvia tileset only)*
-- Externalized map resources for faster startup performance
-- Installer resource bundling support
+- Offline Latvia map support
+- POI creation and editing
+- Category-based colored map markers
+- Attachment support
+- File preview support
+- Open files directly on PC
+- Export / import backup system
+- Offline tile extraction system
+- Progressive background map loading
+- Fast installer resource loading
+- Automatic cleanup of unused files
+- Desktop installer support
+- Fullscreen desktop mode
+- Local-first storage architecture
 
 ### 🛠️ In Progress / Planned
 
@@ -26,29 +55,55 @@ Built using:
 ---
 
 ## 🗺️ Offline Maps Setup
+Offline tiles are generated using QGIS.
 
 ### QGIS Tile Source Configuration
 
 1. Open **QGIS**
-2. Navigate to:
+Navigate to:
    - `XYZ Tiles`
    - `New Connection`
 
-3. Configure the connection:
-
+2. Configure the connection:
 | Setting | Value |
 |---|---|
 | Name | `CartoDB Positron` |
 | URL | `https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png` |
 
+3. Generate Tiles
+- Recommended zoom levels: 8–15
+- Export format: XYZ Tiles (PNG)
+
 ---
 
 ## ⚡ Performance Notes
 
-To improve startup speed and reduce application load times:
+The application uses several optimizations for offline maps:
+- Externalized tilesets
+- Background tile extraction
+- Split zoom-level resource archives
+- Progressive map loading
+- Installer resource bundling
+- Local caching in AppData
 
-- Store tilesets and marker assets outside the main project directory
-- Bundle large resources as installer extras instead of including them directly in the app bundle
+This allows:
+- faster startup
+- smaller installer overhead
+- improved offline performance
+
+---
+
+📁 Local Data Storage
+
+Application data is stored locally inside:
+- AppData/Roaming/Latvia POI Map
+
+Stored data includes:
+- POIs
+- attachments
+- offline tile cache
+- marker resources
+- imported backups
 
 ---
 
@@ -58,11 +113,12 @@ To improve startup speed and reduce application load times:
 |---|---|
 | React | Frontend framework |
 | TypeScript | Type safety |
+| Electron | Desktop application framework |
 | Vite | Fast build tooling |
 | Leaflet | Interactive maps |
 | React Leaflet | React integration for Leaflet |
 | QGIS | Tile generation & GIS workflow |
-| Import/Export | Local database storage |
+| Electron Builder | Windows installer genertation |
 
 ---
 
@@ -73,7 +129,9 @@ To improve startup speed and reduce application load times:
 | Offline maps | ✅ Completed |
 | Backup system | ✅ Completed |
 | Windows installer | ✅ Completed |
-| Translation to Latvian | 🚧 Planned |
+| Attachment system | ✅ Completed |
+| Progressive tile extraction | ✅ Completed |
+| Latvian translation | 🚧 Planned |
 ---
 
 ## 📦 Getting Started
@@ -102,10 +160,10 @@ npm install
 npm run dev
 ```
 
-### Build for production
+### Build production version
 
 ```bash
-npm run build
+npm run dist
 ```
 
 ---
@@ -113,31 +171,34 @@ npm run build
 ## 📁 Project Goals
 
 This project aims to provide:
-
-- Fast offline-capable map rendering
-- Lightweight desktop deployment
+- fast offline-capable map rendering
+- lightweight desktop deployment
 - GIS-friendly workflows
-- Local-first data storage
-- Expandable spatial tooling
+- local-first architecture
+- expandable spatial tooling
+- simple backup management
 
 ---
 
 ## 🔗 Resources
 
-- React Leaflet Documentation  
+- React Leaflet  
   https://react-leaflet.js.org/
 
-- Leaflet Documentation  
+- Leaflet  
   https://leafletjs.com/
 
 - Leaflet Color Markers  
   https://github.com/pointhi/leaflet-color-markers
 
-- QGIS Official Website  
+- QGIS  
   https://qgis.org/
 
-- Vite Documentation  
+- Vite  
   https://vitejs.dev/
+
+- Electron  
+  https://www.electronjs.org/
 
 ---
 

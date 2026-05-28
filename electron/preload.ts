@@ -17,4 +17,14 @@ contextBridge.exposeInMainWorld("electronAPI", {
 
   openFile: (filePath: string) =>
     ipcRenderer.invoke("open-file", filePath),
+
+  onMapExtractionStatus: (
+    callback: (status: { message: string; detail: string }) => void
+  ) => {
+    ipcRenderer.on("map-extraction-status", (_event, status) => {
+      callback(status);
+    });
+  },
+  getAvailableMaxZoom: () =>
+  ipcRenderer.invoke("get-available-max-zoom"),
 });

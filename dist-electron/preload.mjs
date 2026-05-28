@@ -1,11 +1,1 @@
-"use strict";
-const electron = require("electron");
-electron.contextBridge.exposeInMainWorld("electronAPI", {
-  saveAttachmentFile: (filePath) => electron.ipcRenderer.invoke("save-attachment-file", filePath),
-  loadPOIs: () => electron.ipcRenderer.invoke("load-pois"),
-  savePOIs: (pois) => electron.ipcRenderer.invoke("save-pois", pois),
-  cleanupUnusedFiles: (usedPaths) => electron.ipcRenderer.invoke("cleanup-unused-files", usedPaths),
-  exportBackup: () => electron.ipcRenderer.invoke("export-backup"),
-  importBackup: () => electron.ipcRenderer.invoke("import-backup"),
-  openFile: (filePath) => electron.ipcRenderer.invoke("open-file", filePath)
-});
+"use strict";const e=require("electron");e.contextBridge.exposeInMainWorld("electronAPI",{saveAttachmentFile:n=>e.ipcRenderer.invoke("save-attachment-file",n),loadPOIs:()=>e.ipcRenderer.invoke("load-pois"),savePOIs:n=>e.ipcRenderer.invoke("save-pois",n),cleanupUnusedFiles:n=>e.ipcRenderer.invoke("cleanup-unused-files",n),exportBackup:()=>e.ipcRenderer.invoke("export-backup"),importBackup:()=>e.ipcRenderer.invoke("import-backup"),openFile:n=>e.ipcRenderer.invoke("open-file",n),onMapExtractionStatus:n=>{e.ipcRenderer.on("map-extraction-status",(o,i)=>{n(i)})},getAvailableMaxZoom:()=>e.ipcRenderer.invoke("get-available-max-zoom")});

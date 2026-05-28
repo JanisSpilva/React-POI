@@ -16,6 +16,7 @@ declare global {
       cleanupUnusedFiles: (usedPaths: string[]) => Promise<void>;
       loadPOIs: () => Promise<POI[]>;
       savePOIs: (pois: POI[]) => Promise<void>;
+
       saveAttachmentFile: (
         filePath: string
       ) => Promise<{
@@ -24,10 +25,15 @@ declare global {
       }>;
 
       exportBackup: () => Promise<boolean>;
-
       importBackup: () => Promise<boolean>;
-
       openFile: (filePath: string) => Promise<boolean>;
+
+      getAvailableMaxZoom: () => Promise<number>;
+
+      onMapExtractionStatus: (
+        callback: (status: { message: string; detail: string }) => void
+      ) => void;
+
     };
   }
 }
@@ -102,6 +108,11 @@ function App() {
   const [editingPoiId, setEditingPoiId] = useState<number | null>(null);
   const [poisLoaded, setPoisLoaded] = useState(false);
   const viewableFiles = selectedPoi ? selectedPoi.attachments : [];
+  const [availableMaxZoom, setAvailableMaxZoom] = useState(10);
+  const [mapExtractionStatus, setMapExtractionStatus] = useState<{
+    message: string;
+    detail: string;
+  } | null>(null);
 
   const filteredPois = pois.filter((poi) => {
 
@@ -126,9 +137,16 @@ function App() {
 
     mapRef.fitBounds(bounds, {
       padding: [50, 50],
-      maxZoom: 15,
+      maxZoom: availableMaxZoom,
     });
-  }, [searchText, categoryFilter, mapRef, selectedPoi]);
+  }, [
+    searchText, 
+    categoryFilter, 
+    pois, 
+    mapRef, 
+    selectedPoi, 
+    availableMaxZoom
+  ]);
 
   useEffect(() => {
     window.electronAPI.loadPOIs().then((loadedPois) => {
@@ -138,10 +156,47 @@ function App() {
   }, []);
 
   useEffect(() => {
+    window.electronAPI.getAvailableMaxZoom().then((zoom) => {
+      setAvailableMaxZoom(zoom);
+    });
+  }, []);
+
+  useEffect(() => {
+    window.electronAPI.onMapExtractionStatus(async (status) => {
+      setMapExtractionStatus(status);
+
+      if (status.message === "Medium map detail ready") {
+        setAvailableMaxZoom(12);
+      }
+
+      if (status.message === "Detailed map layers ready") {
+        setAvailableMaxZoom(15);
+      }
+
+      if (status.message === "Offline map ready") {
+        const zoom = await window.electronAPI.getAvailableMaxZoom();
+        setAvailableMaxZoom(zoom);
+
+        setTimeout(() => {
+          setMapExtractionStatus(null);
+        }, 5000);
+      }
+    });
+  }, []);
+
+  useEffect(() => {
     if (!poisLoaded) return;
 
     window.electronAPI.savePOIs(pois);
   }, [pois, poisLoaded]);
+
+  useEffect(() => {
+    if (!mapRef) return;
+
+    setTimeout(() => {
+      mapRef.invalidateSize();
+    }, 100);
+  }, [pois, mapRef]);
 
   function cleanupFilesAfterChange(nextPois: POI[]) {
     const usedPaths = nextPois.flatMap((poi) =>
@@ -384,6 +439,8 @@ function App() {
           background: "#f4f4f4",
           borderRight: "1px solid #ccc",
           overflowY: "auto",
+          display: "flex",
+          flexDirection: "column",
         }}
       >
         <h2>POI Map</h2>
@@ -549,9 +606,53 @@ function App() {
             ))}
           </>
         )}
+        {mapExtractionStatus && (
+          <div
+            style={{
+              marginTop: "auto",
+              background: "white",
+              border: "1px solid #ccc",
+              borderRadius: 8,
+              padding: 14,
+              width: "100%",
+              boxSizing: "border-box",
+              boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+            }}
+          >
+            <b>{mapExtractionStatus.message}</b>
+
+            <p style={{ marginBottom: 8 }}>
+              {mapExtractionStatus.detail}
+            </p>
+
+            <div
+              style={{
+                height: 8,
+                width: "100%",
+                background: "#ddd",
+                borderRadius: 99,
+                overflow: "hidden",
+              }}
+            >
+              <div
+                style={{
+                  height: "100%",
+                  width:
+                    mapExtractionStatus.detail.includes("13")
+                      ? "66%"
+                      : mapExtractionStatus.message === "Offline map ready"
+                      ? "100%"
+                      : "33%",
+                  background: "#4caf50",
+                }}
+              />
+            </div>
+          </div>
+        )}
       </div>
 
       <div style={{ flex: 1, position: "relative" }}>
+
         {selectedPoi ? (
           <div
             style={{
@@ -771,7 +872,7 @@ function App() {
             style={{
               position: "absolute",
               top: 20,
-              left: 20,
+              left: 70,
               zIndex: 1000,
               background: "white",
               padding: 12,
@@ -847,7 +948,7 @@ function App() {
           center={[56.8796, 24.6032]}
           zoom={8}
           minZoom={8}
-          maxZoom={15}
+          maxZoom={availableMaxZoom}
           style={{ height: "100%", width: "100%" }}
         >
           <TileLayer

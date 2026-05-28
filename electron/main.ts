@@ -2,6 +2,7 @@ import { app, BrowserWindow, ipcMain, protocol, shell, dialog } from 'electron'
 import { fileURLToPath } from 'node:url'
 import fs from 'node:fs'
 import path from 'node:path'
+import extract from "extract-zip";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 process.env.APP_ROOT = path.join(__dirname, '..')
@@ -9,6 +10,8 @@ process.env.APP_ROOT = path.join(__dirname, '..')
 const dataFolder = path.join(app.getPath("userData"), "poi-map-data");
 const attachmentsFolder = path.join(dataFolder, "attachments");
 const poiFile = path.join(dataFolder, "pois.json");
+const extractedTilesFolder = path.join(dataFolder, "offline-tiles");
+const extractedMarkerFolder = path.join(dataFolder, "marker-icons");
 
 function ensureDataFolders() {
   if (!fs.existsSync(dataFolder)) fs.mkdirSync(dataFolder);
@@ -127,6 +130,26 @@ ipcMain.handle("open-file", async (_event, filePath: string) => {
   return true;
 });
 
+function getAvailableMaxZoom() {
+  if (fs.existsSync(path.join(extractedTilesFolder, ".detail-ready"))) {
+    return 15;
+  }
+
+  if (fs.existsSync(path.join(extractedTilesFolder, ".medium-ready"))) {
+    return 12;
+  }
+
+  if (fs.existsSync(path.join(extractedTilesFolder, ".basic-ready"))) {
+    return 10;
+  }
+
+  return 8;
+}
+
+ipcMain.handle("get-available-max-zoom", () => {
+  return getAvailableMaxZoom();
+});
+
 export const VITE_DEV_SERVER_URL = process.env['VITE_DEV_SERVER_URL']
 export const MAIN_DIST = path.join(process.env.APP_ROOT, 'dist-electron')
 export const RENDERER_DIST = path.join(process.env.APP_ROOT, 'dist')
@@ -134,6 +157,113 @@ export const RENDERER_DIST = path.join(process.env.APP_ROOT, 'dist')
 process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL ? path.join(process.env.APP_ROOT, 'public') : RENDERER_DIST
 
 let win: BrowserWindow | null
+
+function getResourceZipPath(fileName: string) {
+  return app.isPackaged
+    ? path.join(process.resourcesPath, fileName)
+    : path.join("C:\\Users\\sairo\\MAP", fileName);
+}
+
+async function extractZipIfNeeded(
+  zipName: string,
+  targetFolder: string,
+  doneFileName: string
+) {
+  const doneFile = path.join(targetFolder, doneFileName);
+
+  if (fs.existsSync(doneFile)) {
+    return;
+  }
+
+  const zipPath = getResourceZipPath(zipName);
+
+  if (!fs.existsSync(zipPath)) {
+    console.error("Missing ZIP:", zipPath);
+    return;
+  }
+
+  await extract(zipPath, {
+    dir: targetFolder,
+  });
+
+  fs.writeFileSync(doneFile, "done", "utf-8");
+}
+
+async function ensureBasicOfflineResources() {
+  ensureDataFolders();
+
+  if (!fs.existsSync(extractedTilesFolder)) {
+    fs.mkdirSync(extractedTilesFolder, { recursive: true });
+  }
+
+  if (!fs.existsSync(extractedMarkerFolder)) {
+    fs.mkdirSync(extractedMarkerFolder, { recursive: true });
+  }
+
+  await extractZipIfNeeded(
+    "latvia-tiles-basic.zip",
+    extractedTilesFolder,
+    ".basic-ready"
+  );
+
+  await extractZipIfNeeded(
+    "latvia-marker-icons.zip",
+    extractedMarkerFolder,
+    ".markers-ready"
+  );
+}
+
+async function extractDetailedTilesInBackground() {
+  try {
+    if (!fs.existsSync(path.join(extractedTilesFolder, ".medium-ready"))) {
+      win?.webContents.send("map-extraction-status", {
+        message: "Preparing medium map detail...",
+        detail: "Zoom 11–12 unpacking",
+      });
+
+      await extractZipIfNeeded(
+        "latvia-tiles-medium.zip",
+        extractedTilesFolder,
+        ".medium-ready"
+      );
+
+      win?.webContents.send("map-extraction-status", {
+        message: "Medium map detail ready",
+        detail: "Zoom 11–12 is now available",
+      });
+    }
+
+    if (!fs.existsSync(path.join(extractedTilesFolder, ".detail-ready"))) {
+      win?.webContents.send("map-extraction-status", {
+        message: "Preparing detailed map layers...",
+        detail: "Zoom 13–15 unpacking",
+      });
+
+      await extractZipIfNeeded(
+        "latvia-tiles-detail.zip",
+        extractedTilesFolder,
+        ".detail-ready"
+      );
+
+      win?.webContents.send("map-extraction-status", {
+        message: "Detailed map layers ready",
+        detail: "Zoom 13–15 is now available",
+      });
+    }
+
+    win?.webContents.send("map-extraction-status", {
+      message: "Offline map ready",
+      detail: "All zoom levels are available",
+    });
+  } catch (error) {
+    console.error("Background extraction failed:", error);
+
+    win?.webContents.send("map-extraction-status", {
+      message: "Map extraction problem",
+      detail: "Some zoom levels may not be available yet",
+    });
+  }
+}
 
 function createWindow() {
   win = new BrowserWindow({
@@ -179,7 +309,8 @@ app.on('activate', () => {
   }
 })
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
+  await ensureBasicOfflineResources();
   protocol.registerFileProtocol("localfile", (request, callback) => {
     const filePath = decodeURIComponent(
       request.url.replace("localfile://", "")
@@ -193,7 +324,7 @@ app.whenReady().then(() => {
     );
 
     const markerIconsFolder = app.isPackaged
-      ? path.join(process.resourcesPath, "marker-icons")
+      ? extractedMarkerFolder
       : "C:\\Users\\sairo\\MAP\\latvia-marker-icons";
 
     const fullPath = path.join(markerIconsFolder, iconPath);
@@ -207,7 +338,7 @@ app.whenReady().then(() => {
     );
 
   const tilesFolder = app.isPackaged
-    ? path.join(process.resourcesPath, "offline-tiles")
+    ? extractedTilesFolder
     : "C:\\Users\\sairo\\MAP\\latvia-offline-tiles";
 
   const fullPath = path.join(tilesFolder, tilePath);
@@ -216,4 +347,8 @@ app.whenReady().then(() => {
   });
 
   createWindow();
+
+  setTimeout(() => {
+    extractDetailedTilesInBackground();
+  }, 1000);
 });
