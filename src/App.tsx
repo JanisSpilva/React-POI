@@ -9,6 +9,8 @@ import {
 
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import lv from "./translations/lv";
+import en from "./translations/en";
 
 declare global {
   interface Window {
@@ -82,21 +84,35 @@ function MapClickHandler({
 }
 
 function App() {
+  const [language, setLanguage] = useState<"lv" | "en">("lv");
+  const t = language === "lv" ? lv : en;
   const [selectedMode, setSelectedMode] = useState<"view" | "edit" | null>(null);
   const editMode = selectedMode === "edit";
   const categoryOptions = [
-    "Military",
-    "History",
-    "Nature",
-    "City",
-    "Other",
+    {
+      value: "military",
+      label: t.categories.military,
+    },
+    {
+      value: "history",
+      label: t.categories.history,
+    },
+    {
+      value: "nature",
+      label: t.categories.nature,
+    },
+    {
+      value: "city",
+      label: t.categories.city,
+    },
+    {
+      value: "other",
+      label: t.categories.other,
+    },
   ];
   const [pois, setPois] = useState<POI[]>([]);
   const [newPoint, setNewPoint] = useState<{ lat: number; lng: number } | null>(null);
-
-  const categories = Array.from(
-    new Set(pois.map((poi) => poi.category).filter(Boolean))
-  );
+  const categories = categoryOptions.map((category) => category.value);
   const [poiName, setPoiName] = useState("");
   const [poiCategory, setPoiCategory] = useState("");
   const [poiDescription, setPoiDescription] = useState("");
@@ -114,6 +130,20 @@ function App() {
     detail: string;
   } | null>(null);
 
+  const normalizeCategory = (category: string) => {
+    return category.trim().toLowerCase();
+  };
+
+  const getCategoryLabel = (category: string) => {
+    const normalized = normalizeCategory(category);
+
+    return (
+      t.categories[
+        normalized as keyof typeof t.categories
+      ] || category
+    );
+  };
+
   const filteredPois = pois.filter((poi) => {
 
     const matchesSearch =
@@ -121,7 +151,8 @@ function App() {
       poi.description.toLowerCase().includes(searchText.toLowerCase());
 
     const matchesCategory =
-      categoryFilter === "" || poi.category === categoryFilter;
+      categoryFilter === "" ||
+      normalizeCategory(poi.category) === categoryFilter;
 
     return matchesSearch && matchesCategory;
   });
@@ -278,7 +309,7 @@ function App() {
   }
 
   function deletePOI(id: number) {
-    const confirmDelete = window.confirm("Delete this POI?");
+    const confirmDelete = window.confirm(t.messages.deletePoiConfirm);
 
     if (!confirmDelete) return;
 
@@ -329,7 +360,7 @@ function App() {
   function deleteFileFromPoi(fileId: number) {
     if (!selectedPoi) return;
 
-    const confirmDelete = window.confirm("Delete this file?");
+    const confirmDelete = window.confirm(t.messages.deleteFileConfirm);
 
     if (!confirmDelete) return;
 
@@ -358,13 +389,13 @@ function App() {
     const success = await window.electronAPI.exportBackup();
 
     if (success) {
-      alert("Backup exported successfully.");
+      alert(t.messages.backupExported);
     }
   }
 
   async function importBackup() {
     const confirmImport = window.confirm(
-      "Importing a backup will replace current POIs and files. Continue?"
+      t.messages.importBackupConfirm
     );
 
     if (!confirmImport) return;
@@ -375,7 +406,7 @@ function App() {
       const loadedPois = await window.electronAPI.loadPOIs();
       setPois(loadedPois || []);
       setSelectedPoi(null);
-      alert("Backup imported successfully.");
+      alert(t.messages.backupImported);
     }
   }
 
@@ -401,8 +432,24 @@ function App() {
             width: 320,
           }}
         >
-          <h1>POI Map</h1>
-          <p>Select how you want to open the map.</p>
+          <h1>{t.labels.appTitle}</h1>
+          <p>{t.labels.modeSelectText}</p>
+          <select
+            value={language}
+            onChange={(e) => setLanguage(e.target.value as "lv" | "en")}
+            style={{
+              padding: 10,
+              width: "100%",
+              marginBottom: 16,
+              boxSizing: "border-box",
+            }}
+          >
+            <option value="lv">Latviešu</option>
+            <option value="en">English</option>
+          </select>
+          <p>
+            <p>{t.labels.modeSelectText}</p>
+          </p>
 
           <button
             onClick={() => setSelectedMode("view")}
@@ -413,7 +460,7 @@ function App() {
               cursor: "pointer",
             }}
           >
-            View Mode
+            {t.modes.view}
           </button>
 
           <button
@@ -424,7 +471,7 @@ function App() {
               cursor: "pointer",
             }}
           >
-            Edit Mode
+            {t.modes.edit}
           </button>
         </div>
       </div>
@@ -443,7 +490,7 @@ function App() {
           flexDirection: "column",
         }}
       >
-        <h2>POI Map</h2>
+        <h2>{t.labels.appTitle}</h2>
 
         <button
           onClick={() => setSelectedMode(null)}
@@ -454,7 +501,7 @@ function App() {
             cursor: "pointer",
           }}
         >
-          Back to mode select
+          {t.labels.backToModeSelect}
         </button>
 
         {editMode && (
@@ -468,7 +515,7 @@ function App() {
                 cursor: "pointer",
               }}
             >
-              Export backup
+              {t.buttons.exportBackup}
             </button>
 
             <button
@@ -480,15 +527,15 @@ function App() {
                 cursor: "pointer",
               }}
             >
-              Import backup
+              {t.buttons.importBackup}
             </button>
           </>
         )}
 
         <p style={{ fontSize: 13 }}>
           {editMode
-            ? "Edit mode: click on the map to add a new POI."
-            : "View mode: search and view POIs."}
+            ? t.labels.editModeHelp
+            : t.labels.viewModeHelp}
         </p>
 
         <hr />
@@ -499,22 +546,22 @@ function App() {
               onClick={() => setSelectedPoi(null)}
               style={{ padding: 8, width: "100%", marginBottom: 10 }}
             >
-              Back to map
+              {t.labels.backToMap}
             </button>
 
             <h3>{selectedPoi.name}</h3>
 
             <p>
-              <b>Group:</b> {selectedPoi.category}
+              <b>{t.labels.group}:</b> {getCategoryLabel(selectedPoi.category)}
             </p>
 
             <p>
-              <b>Description:</b> {selectedPoi.description}
+              <b>{t.labels.description}:</b> {selectedPoi.description}
             </p>
 
             {editMode && (
               <>
-                <h3>Add file</h3>
+                <h3>{t.labels.addFile}</h3>
 
                 <input
                   type="file"
@@ -527,12 +574,12 @@ function App() {
           </>
         ) : (
           <>
-            <h3>POIs</h3>
+            <h3>{t.labels.pointsOfInterest}</h3>
 
             <input
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
-              placeholder="Search POIs..."
+              placeholder={t.placeholders.search}
               style={{
                 padding: 8,
                 width: "100%",
@@ -551,16 +598,16 @@ function App() {
                 boxSizing: "border-box",
               }}
             >
-              <option value="">All groups</option>
+              <option value="">{t.labels.allGroups}</option>
 
               {categories.map((category) => (
                 <option key={category} value={category}>
-                  {category}
+                  {getCategoryLabel(category)}
                 </option>
               ))}
             </select>
 
-            {pois.length === 0 && <p>No POIs yet.</p>}
+            {pois.length === 0 && <p>{t.labels.noPois}</p>}
 
             {filteredPois.map((poi) => (
               <div
@@ -575,7 +622,9 @@ function App() {
               >
                 <b>{poi.name}</b>
                 <br />
-                <small>{poi.category || "No group"}</small>
+                <small>
+                  {poi.category ? getCategoryLabel(poi.category) : t.labels.noGroup}
+                </small>
 
                 {editMode && (
                   <>
@@ -591,14 +640,14 @@ function App() {
                         setPoiDescription(poi.description);
                       }}
                     >
-                      Edit
+                      {t.buttons.edit}
                     </button>
 
                     <button
                       onClick={() => deletePOI(poi.id)}
                       style={{ marginLeft: 8 }}
                     >
-                      Delete
+                      {t.buttons.delete}
                     </button>
                   </>
                 )}
@@ -664,9 +713,9 @@ function App() {
           >
             <hr />
 
-            <h2>Files</h2>
+            <h2>{t.labels.pois}</h2>
 
-            {selectedPoi.attachments.length === 0 && <p>No files added yet.</p>}
+            {selectedPoi.attachments.length === 0 && <p>{t.labels.noFiles}</p>}
 
             {selectedPoi.attachments.map((file) => (
               <div
@@ -687,7 +736,7 @@ function App() {
                   }}
                   style={{ padding: "6px 10px", marginBottom: 10 }}
                 >
-                  Open viewer
+                  {t.buttons.openViewer}
                 </button>
                 {editMode && (
                   <button
@@ -701,7 +750,7 @@ function App() {
                       cursor: "pointer",
                     }}
                   >
-                    Delete file
+                    {t.buttons.deleteFile}
                   </button>
                 )}
 
@@ -742,7 +791,7 @@ function App() {
                   <button
                     onClick={() => window.electronAPI.openFile(file.path)}
                   >
-                    Open document
+                    {t.buttons.openDocument}
                   </button>
                 )}
               </div>
@@ -772,7 +821,7 @@ function App() {
                     cursor: "pointer",
                   }}
                 >
-                  Close
+                  {t.buttons.close}
                 </button>
 
                 <h3 style={{ color: "white" }}>
@@ -808,10 +857,10 @@ function App() {
                   />
                 ) : (
                   <div style={{ color: "white", textAlign: "center" }}>
-                    <p>This file cannot be previewed directly.</p>
+                    <p>{t.messages.fileCannotPreview}</p>
 
                     <p style={{ color: "white" }}>
-                      This document type cannot be previewed.
+                      {t.messages.documentCannotPreview}
                     </p>
 
                     <button
@@ -823,7 +872,7 @@ function App() {
                         cursor: "pointer",
                       }}
                     >
-                      Open file on PC
+                      {t.buttons.openFile}
                     </button>
                   </div>
                 )}
@@ -847,7 +896,7 @@ function App() {
                     }
                     style={{ padding: 10, marginRight: 10 }}
                   >
-                    Previous
+                    {t.buttons.previous}
                   </button>
 
                   <button
@@ -858,7 +907,7 @@ function App() {
                     }
                     style={{ padding: 10 }}
                   >
-                    Next
+                    {t.buttons.next}
                   </button>
                 </div>
               </div>
@@ -882,13 +931,13 @@ function App() {
             }}
           >
             <h3 style={{ marginTop: 0 }}>
-              {editingPoiId !== null ? "Edit POI" : "Add new POI"}
+              {editingPoiId !== null ? t.messages.editPoi : t.messages.addNewPoi}
             </h3>
 
             <input
               value={poiName}
               onChange={(e) => setPoiName(e.target.value)}
-              placeholder="POI name"
+              placeholder={t.placeholders.poiName}
               style={{
                 padding: 8,
                 width: "100%",
@@ -907,11 +956,14 @@ function App() {
                 boxSizing: "border-box",
               }}
             >
-              <option value="">Select group</option>
+              <option value="">{t.labels.selectGroup}</option>
 
               {categoryOptions.map((category) => (
-                <option key={category} value={category}>
-                  {category}
+                <option
+                  key={category.value}
+                  value={category.value}
+                >
+                  {category.label}
                 </option>
               ))}
             </select>
@@ -919,7 +971,7 @@ function App() {
             <textarea
               value={poiDescription}
               onChange={(e) => setPoiDescription(e.target.value)}
-              placeholder="Description"
+              placeholder={t.placeholders.description}
               style={{
                 padding: 8,
                 width: "100%",
@@ -929,7 +981,7 @@ function App() {
             />
 
             <div style={{ marginTop: 10 }}>
-              <button onClick={savePOI}>Save</button>
+              <button onClick={savePOI}>{t.buttons.save}</button>
               <button
                 onClick={() => {
                   setNewPoint(null);
@@ -937,7 +989,7 @@ function App() {
                 }}
                 style={{ marginLeft: 8 }}
               >
-                Cancel
+                {t.buttons.cancel}
               </button>
             </div>
           </div>
@@ -977,12 +1029,12 @@ function App() {
                   <br />
                   <br />
 
-                  <b>Category:</b> {poi.category}
+                  <b>{t.labels.category}:</b> {getCategoryLabel(poi.category)}
 
                   <br />
                   <br />
 
-                  <b>Description:</b>
+                  <b>{t.labels.description}:</b>
 
                   <div style={{ marginTop: 4 }}>
                     {poi.description}
@@ -998,7 +1050,7 @@ function App() {
                       cursor: "pointer",
                     }}
                   >
-                    Select
+                    {t.buttons.select}
                   </button>
                 </div>
               </Popup>
