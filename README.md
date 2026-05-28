@@ -48,9 +48,6 @@ Built using:
 - Desktop installer support
 - Fullscreen desktop mode
 - Local-first storage architecture
-
-### 🛠️ In Progress / Planned
-
 - Translation to Latvian
 
 ---
@@ -132,7 +129,7 @@ Stored data includes:
 | Windows installer | ✅ Completed |
 | Attachment system | ✅ Completed |
 | Progressive tile extraction | ✅ Completed |
-| Latvian translation | 🚧 Planned |
+| Latvian translation | ✅ Completed |
 ---
 
 ## 📦 Getting Started
