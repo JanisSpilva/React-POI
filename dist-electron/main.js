@@ -2475,7 +2475,16 @@ ipcMain.handle("export-backup", async () => {
     result.filePaths[0],
     `poi-map-backup-${Date.now()}`
   );
-  copyFolderSync(dataFolder, backupFolder);
+  fs$4.mkdirSync(backupFolder, { recursive: true });
+  if (fs$4.existsSync(poiFile)) {
+    fs$4.copyFileSync(poiFile, path$1.join(backupFolder, "pois.json"));
+  }
+  if (fs$4.existsSync(attachmentsFolder)) {
+    copyFolderSync(
+      attachmentsFolder,
+      path$1.join(backupFolder, "attachments")
+    );
+  }
   return true;
 });
 ipcMain.handle("import-backup", async () => {
@@ -2488,7 +2497,20 @@ ipcMain.handle("import-backup", async () => {
   }
   ensureDataFolders();
   const selectedFolder = result.filePaths[0];
-  copyFolderSync(selectedFolder, dataFolder);
+  const backupPoiFile = path$1.join(selectedFolder, "pois.json");
+  const backupAttachmentsFolder = path$1.join(selectedFolder, "attachments");
+  if (fs$4.existsSync(backupPoiFile)) {
+    fs$4.copyFileSync(backupPoiFile, poiFile);
+  }
+  if (fs$4.existsSync(backupAttachmentsFolder)) {
+    if (fs$4.existsSync(attachmentsFolder)) {
+      fs$4.rmSync(attachmentsFolder, {
+        recursive: true,
+        force: true
+      });
+    }
+    copyFolderSync(backupAttachmentsFolder, attachmentsFolder);
+  }
   return true;
 });
 ipcMain.handle("load-pois", () => {
