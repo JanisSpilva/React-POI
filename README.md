@@ -130,6 +130,7 @@ Stored data includes:
 | Attachment system | ✅ Completed |
 | Progressive tile extraction | ✅ Completed |
 | Latvian translation | ✅ Completed |
+| Interactive guided tutorial | 🚧 Planned |
 ---
 
 ## 📦 Getting Started

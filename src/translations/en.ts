@@ -2,6 +2,7 @@ const en = {
   modes: {
     view: "View Mode",
     edit: "Edit Mode",
+    tutorial: "Tutorial Mode",
   },
 
   buttons: {
@@ -76,6 +77,49 @@ const en = {
     addNewPoi: "Add new POI",
     chooseBackupFolder: "Choose folder to export backup into",
     chooseBackupFile: "Choose backup file",
+  },
+
+  tutorial: {
+    start: "Start",
+    enterPoiName: "Enter the POI name.",
+    selectPoiGroup: "Choose a group for this POI.",
+    enterPoiDescription: "Enter a description for this POI.",
+    savePoi: "Press Save to create the POI.",
+    selectPoiText: "Press Open in the marker popup to open the POI details.",
+    openViewerText: "Use Open viewer to preview attached files.",
+    doneText: "Tutorial completed. You can now use the application.",
+    next: "Next",
+    back: "Back",
+    finish: "Finish",
+    step: "Step",
+
+    welcomeTitle: "Tutorial Mode",
+    welcomeText:
+      "This tutorial will show how to use the map, add POIs, edit them, attach files, and create backups.",
+
+    mapTitle: "Map",
+    mapText:
+      "This is the main map. Press Start to begin basic training.",
+
+    addPoiTitle: "Add POI",
+    addPoiText:
+      "Click inside the highlighted map area to add a new point of interest.",
+
+    formTitle: "Fill POI information",
+    formText:
+      "Enter a name, choose a group, add a description, and press Save.",
+
+    markerTitle: "Open POI",
+    markerText:
+      "After saving, click the marker and choose Open to view the POI details.",
+
+    filesTitle: "Add files",
+    filesText:
+      "Here you can attach images, PDFs, videos, and documents to the selected POI.",
+
+    backupTitle: "Backups",
+    backupText:
+      "In edit mode you can export and import backups to save POIs and attachments.",
   }
 };
 

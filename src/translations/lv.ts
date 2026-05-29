@@ -2,6 +2,7 @@ const lv = {
   modes: {
     view: "Skatīšanās režīms",
     edit: "Rediģēšanas režīms",
+    tutorial: "Pamācības režīms",
   },
 
   buttons: {
@@ -76,6 +77,49 @@ const lv = {
     addNewPoi: "Pievienot jaunu punktu",
     chooseBackupFolder: "Izvēlieties mapi rezerves kopijas eksportēšanai",
     chooseBackupFile: "Izvēlieties rezerves kopijas failu",
+  },
+
+  tutorial: {
+    start: "Sākt",
+    enterPoiName: "Ievadiet punkta nosaukumu.",
+    selectPoiGroup: "Izvēlieties šī punkta grupu.",
+    enterPoiDescription: "Ievadiet punkta aprakstu.",
+    savePoi: "Nospiediet Saglabāt, lai izveidotu punktu.",
+    selectPoiText: "Marķiera logā nospiediet Atvērt, lai atvērtu punkta informāciju.",
+    openViewerText: "Izmantojiet Atvērt skatītāju, lai priekšskatītu pievienotos failus.",
+    doneText: "Apmācība pabeigta. Tagad varat lietot programmu.",
+    next: "Tālāk",
+    back: "Atpakaļ",
+    finish: "Pabeigt",
+    step: "Solis",
+
+    welcomeTitle: "Apmācības režīms",
+    welcomeText:
+      "Šī apmācība parādīs, kā lietot karti, pievienot punktus, rediģēt tos, pievienot failus un veidot rezerves kopijas.",
+
+    mapTitle: "Karte",
+    mapText:
+      "Šī ir galvenā karte. Nospiediet Sākt, lai sāktu pamata apmācību.",
+
+    addPoiTitle: "Pievienot punktu",
+    addPoiText:
+      "Spiediet iezīmētajā kartes zonā, lai pievienotu jaunu punktu.",
+
+    formTitle: "Aizpildīt punkta informāciju",
+    formText:
+      "Ievadiet nosaukumu, izvēlieties grupu, pievienojiet aprakstu un nospiediet Saglabāt.",
+
+    markerTitle: "Atvērt punktu",
+    markerText:
+      "Pēc saglabāšanas spiediet uz marķiera un izvēlieties Atvērt, lai apskatītu punkta informāciju.",
+
+    filesTitle: "Pievienot failus",
+    filesText:
+      "Šeit var pievienot attēlus, PDF, video un dokumentus izvēlētajam punktam.",
+
+    backupTitle: "Rezerves kopijas",
+    backupText:
+      "Rediģēšanas režīmā var eksportēt un importēt rezerves kopijas, lai saglabātu punktus un pielikumus.",
   }
 };
 

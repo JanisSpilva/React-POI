@@ -70,12 +70,12 @@ function MapClickHandler({
   onMapClick,
 }: {
   editMode: boolean;
-  onMapClick: (lat: number, lng: number) => void;
+  onMapClick: (lat: number, lng: number, event: MouseEvent) => void;
 }) {
   useMapEvents({
     click(e) {
       if (editMode) {
-        onMapClick(e.latlng.lat, e.latlng.lng);
+        onMapClick(e.latlng.lat, e.latlng.lng, e.originalEvent);
       }
     },
   });
@@ -83,10 +83,368 @@ function MapClickHandler({
   return null;
 }
 
+function TutorialOverlay({
+  step,
+  t,
+  onStart,
+  onFinish,
+}: {
+  step: TutorialStep;
+  t: any;
+  onStart: () => void;
+  onFinish: () => void;
+}) {
+  const steps: Record<
+    TutorialStep,
+    {
+      title: string;
+      text: string;
+      circle?: { left: string; top: string; size: number };
+      targetId?: string;
+    }
+  > = {
+    mapIntro: {
+      title: t.tutorial.mapTitle,
+      text: t.tutorial.mapText,
+      circle: { left: "62%", top: "50%", size: 320 },
+    },
+    clickMap: {
+      title: t.tutorial.addPoiTitle,
+      text: t.tutorial.addPoiText,
+      circle: { left: "62%", top: "45%", size: 220 },
+    },
+    poiName: {
+      title: t.tutorial.formTitle,
+      text: t.tutorial.enterPoiName,
+      targetId: "tutorial-poi-name",
+    },
+    poiGroup: {
+      title: t.tutorial.formTitle,
+      text: t.tutorial.selectPoiGroup,
+      targetId: "tutorial-poi-group",
+    },
+    poiDescription: {
+      title: t.tutorial.formTitle,
+      text: t.tutorial.enterPoiDescription,
+      targetId: "tutorial-poi-description",
+    },
+    savePoi: {
+      title: t.tutorial.formTitle,
+      text: t.tutorial.savePoi,
+      targetId: "tutorial-save-poi",
+    },
+    clickMarker: {
+      title: t.tutorial.markerTitle,
+      text: t.tutorial.markerText,
+      targetId: "tutorial-created-marker",
+    },
+    selectPoi: {
+      title: t.tutorial.markerTitle,
+      text: t.tutorial.selectPoiText,
+      targetId: "tutorial-select-poi",
+    },
+    addFiles: {
+      title: t.tutorial.filesTitle,
+      text: t.tutorial.filesText,
+      targetId: "tutorial-add-files",
+    },
+    openViewer: {
+      title: t.tutorial.filesTitle,
+      text: t.tutorial.openViewerText,
+      circle: { left: "55%", top: "35%", size: 240 },
+    },
+    backup: {
+      title: t.tutorial.backupTitle,
+      text: t.tutorial.backupText,
+      circle: { left: "150px", top: "155px", size: 190 },
+    },
+    done: {
+      title: t.tutorial.finish,
+      text: t.tutorial.doneText,
+      circle: { left: "50%", top: "50%", size: 260 },
+    },
+  };
+
+  const currentStep = steps[step];
+  const [targetRect, setTargetRect] = useState<DOMRect | null>(null);
+
+  useEffect(() => {
+    const targetId = currentStep.targetId;
+
+    if (!targetId) {
+      setTargetRect(null);
+      return;
+    }
+
+    const updateTargetRect = () => {
+      const element = document.getElementById(targetId);
+      setTargetRect(element ? element.getBoundingClientRect() : null);
+    };
+
+    updateTargetRect();
+
+    const retry1 = setTimeout(updateTargetRect, 100);
+    const retry2 = setTimeout(updateTargetRect, 300);
+    const retry3 = setTimeout(updateTargetRect, 600);
+    const retry4 = setTimeout(updateTargetRect, 1000);
+
+    return () => {
+      clearTimeout(retry1);
+      clearTimeout(retry2);
+      clearTimeout(retry3);
+      clearTimeout(retry4);
+      window.removeEventListener("resize", updateTargetRect);
+      window.removeEventListener("scroll", updateTargetRect, true);
+    };
+
+    window.addEventListener("resize", updateTargetRect);
+    window.addEventListener("scroll", updateTargetRect, true);
+
+    return () => {
+      window.removeEventListener("resize", updateTargetRect);
+      window.removeEventListener("scroll", updateTargetRect, true);
+    };
+  }, [currentStep.targetId]);
+
+  const highlightRect = targetRect
+    ? {
+        left: targetRect.left - 8,
+        top: targetRect.top - 8,
+        width: targetRect.width + 16,
+        height: targetRect.height + 16,
+      }
+    : null;
+  return (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 10000,
+        pointerEvents: "none",
+      }}
+    >
+      {step === "mapIntro" ? (
+        <div
+          style={{
+            position: "absolute",
+            left: 0,
+            top: 0,
+            bottom: 0,
+            width: 332,
+            background: "rgba(0,0,0,0.72)",
+            pointerEvents: "auto",
+          }}
+        />
+      ) : step === "clickMap" ? (
+        <>
+          {/* Left menu dark and disabled */}
+          <div
+            style={{
+              position: "absolute",
+              left: 0,
+              top: 0,
+              bottom: 0,
+              width: 332,
+              background: "rgba(0,0,0,0.72)",
+              pointerEvents: "auto",
+            }}
+          />
+
+          {/* Dark top area above circle */}
+          <div
+            style={{
+              position: "absolute",
+              left: 332,
+              top: 0,
+              right: 0,
+              height: "calc(45% - 110px)",
+              background: "rgba(0,0,0,0.72)",
+              pointerEvents: "auto",
+            }}
+          />
+
+          {/* Dark bottom area below circle */}
+          <div
+            style={{
+              position: "absolute",
+              left: 332,
+              top: "calc(45% + 110px)",
+              right: 0,
+              bottom: 0,
+              background: "rgba(0,0,0,0.72)",
+              pointerEvents: "auto",
+            }}
+          />
+
+          {/* Dark left area beside circle */}
+          <div
+            style={{
+              position: "absolute",
+              left: 332,
+              top: "calc(45% - 110px)",
+              width: "calc(62% - 110px - 332px)",
+              height: 220,
+              background: "rgba(0,0,0,0.72)",
+              pointerEvents: "auto",
+            }}
+          />
+
+          {/* Dark right area beside circle */}
+          <div
+            style={{
+              position: "absolute",
+              left: "calc(62% + 110px)",
+              top: "calc(45% - 110px)",
+              right: 0,
+              height: 220,
+              background: "rgba(0,0,0,0.72)",
+              pointerEvents: "auto",
+            }}
+          />
+        </>
+      ) : highlightRect ? (
+        <>
+          <div
+            style={{
+              position: "absolute",
+              left: 0,
+              top: 0,
+              right: 0,
+              height: highlightRect.top,
+              background: "rgba(0,0,0,0.72)",
+              pointerEvents: "auto",
+            }}
+          />
+
+          <div
+            style={{
+              position: "absolute",
+              left: 0,
+              top: highlightRect.top + highlightRect.height,
+              right: 0,
+              bottom: 0,
+              background: "rgba(0,0,0,0.72)",
+              pointerEvents: "auto",
+            }}
+          />
+
+          <div
+            style={{
+              position: "absolute",
+              left: 0,
+              top: highlightRect.top,
+              width: highlightRect.left,
+              height: highlightRect.height,
+              background: "rgba(0,0,0,0.72)",
+              pointerEvents: "auto",
+            }}
+          />
+
+          <div
+            style={{
+              position: "absolute",
+              left: highlightRect.left + highlightRect.width,
+              top: highlightRect.top,
+              right: 0,
+              height: highlightRect.height,
+              background: "rgba(0,0,0,0.72)",
+              pointerEvents: "auto",
+            }}
+          />
+        </>
+      )
+        : (
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            background: "rgba(0,0,0,0.72)",
+          }}
+        />
+      )}
+
+      {step !== "mapIntro" && (
+        <div
+          style={{
+            position: "absolute",
+            left: targetRect
+              ? targetRect.left - 8
+              : currentStep.circle
+              ? currentStep.circle.left
+              : 0,
+            top: targetRect
+              ? targetRect.top - 8
+              : currentStep.circle
+              ? currentStep.circle.top
+              : 0,
+            width: targetRect
+              ? targetRect.width + 16
+              : currentStep.circle
+              ? currentStep.circle.size
+              : 0,
+            height: targetRect
+              ? targetRect.height + 16
+              : currentStep.circle
+              ? currentStep.circle.size
+              : 0,
+            transform: targetRect ? "none" : "translate(-50%, -50%)",
+            borderRadius: targetRect || step === "clickMap" ? 12 : "50%",
+            border: "4px solid white",
+            background: "none",
+            pointerEvents: "none",
+            boxSizing: "border-box",
+          }}
+        />
+      )}
+
+      <div
+        style={{
+          position: "absolute",
+          right: 30,
+          bottom: 30,
+          width: 380,
+          background: "white",
+          borderRadius: 12,
+          padding: 18,
+          boxShadow: "0 4px 20px rgba(0,0,0,0.4)",
+          pointerEvents: "auto",
+        }}
+      >
+        <h3 style={{ marginTop: 0 }}>{currentStep.title}</h3>
+        <p>{currentStep.text}</p>
+
+        {step === "mapIntro" && (
+          <button onClick={onStart}>{t.tutorial.start}</button>
+        )}
+
+        {step === "done" && (
+          <button onClick={onFinish}>{t.tutorial.finish}</button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+type TutorialStep =
+  | "mapIntro"
+  | "clickMap"
+  | "poiName"
+  | "poiGroup"
+  | "poiDescription"
+  | "savePoi"
+  | "clickMarker"
+  | "selectPoi"
+  | "addFiles"
+  | "openViewer"
+  | "backup"
+  | "done";
+
 function App() {
   const [language, setLanguage] = useState<"lv" | "en">("lv");
   const t = language === "lv" ? lv : en;
   const [selectedMode, setSelectedMode] = useState<"view" | "edit" | null>(null);
+  const [tutorialMode, setTutorialMode] = useState(false);
+  const [tutorialStep, setTutorialStep] = useState<TutorialStep>("mapIntro");
   const editMode = selectedMode === "edit";
   const categoryOptions = [
     {
@@ -125,6 +483,7 @@ function App() {
   const [poisLoaded, setPoisLoaded] = useState(false);
   const viewableFiles = selectedPoi ? selectedPoi.attachments : [];
   const [availableMaxZoom, setAvailableMaxZoom] = useState(10);
+  const [tutorialPoiId, setTutorialPoiId] = useState<number | null>(null);
   const [mapExtractionStatus, setMapExtractionStatus] = useState<{
     message: string;
     detail: string;
@@ -229,6 +588,12 @@ function App() {
     }, 100);
   }, [pois, mapRef]);
 
+  function advanceTutorial(nextStep: TutorialStep) {
+    if (!tutorialMode) return;
+
+    setTutorialStep(nextStep);
+  }
+
   function cleanupFilesAfterChange(nextPois: POI[]) {
     const usedPaths = nextPois.flatMap((poi) =>
       poi.attachments.map((file) => file.path)
@@ -263,11 +628,30 @@ function App() {
     });
   }
 
-  function handleMapClick(lat: number, lng: number) {
+  function handleMapClick(lat: number, lng: number, event: MouseEvent) {
+    if (tutorialMode && tutorialStep === "clickMap") {
+      const circleCenterX = window.innerWidth * 0.62;
+      const circleCenterY = window.innerHeight * 0.45;
+      const circleRadius = 110;
+
+      const distance = Math.sqrt(
+        Math.pow(event.clientX - circleCenterX, 2) +
+        Math.pow(event.clientY - circleCenterY, 2)
+      );
+
+      if (distance > circleRadius) {
+        return;
+      }
+    }
+    setEditingPoiId(null);
     setNewPoint({ lat, lng });
     setPoiName("");
     setPoiCategory("");
     setPoiDescription("");
+
+    if (tutorialMode && tutorialStep === "clickMap") {
+      advanceTutorial("poiName");
+    }
   }
 
   function savePOI() {
@@ -291,11 +675,16 @@ function App() {
 
       setEditingPoiId(null);
       setNewPoint(null);
+      if (tutorialMode && tutorialStep === "savePoi") {
+        advanceTutorial("clickMarker");
+      }
       return;
     }
 
+    const newPoiId = Date.now();
+
     const newPOI: POI = {
-      id: Date.now(),
+      id: newPoiId,
       name: poiName,
       category: poiCategory,
       description: poiDescription,
@@ -305,7 +694,22 @@ function App() {
     };
 
     setPois((prev) => [...prev, newPOI]);
+    if (tutorialMode) {
+      setTutorialPoiId(newPoiId);
+    }
     setNewPoint(null);
+    setPoiName("");
+    setPoiCategory("");
+    setPoiDescription("");
+    setEditingPoiId(null);
+
+    if (tutorialMode && tutorialStep === "savePoi") {
+      setTutorialPoiId(newPoiId);
+
+      setTimeout(() => {
+        advanceTutorial("clickMarker");
+      }, 300);
+    }
   }
 
   function deletePOI(id: number) {
@@ -354,6 +758,9 @@ function App() {
             }
           : prev
       );
+    }
+    if (tutorialMode && tutorialStep === "addFiles") {
+      advanceTutorial("openViewer");
     }
   }
 
@@ -447,9 +854,6 @@ function App() {
             <option value="lv">Latviešu</option>
             <option value="en">English</option>
           </select>
-          <p>
-            <p>{t.labels.modeSelectText}</p>
-          </p>
 
           <button
             onClick={() => setSelectedMode("view")}
@@ -472,6 +876,21 @@ function App() {
             }}
           >
             {t.modes.edit}
+          </button>
+          <button
+            onClick={() => {
+              setSelectedMode("edit");
+              setTutorialMode(true);
+              setTutorialStep("mapIntro");
+            }}
+            style={{
+              padding: 12,
+              width: "100%",
+              marginTop: 12,
+              cursor: "pointer",
+            }}
+          >
+            {t.modes.tutorial}
           </button>
         </div>
       </div>
@@ -564,6 +983,7 @@ function App() {
                 <h3>{t.labels.addFile}</h3>
 
                 <input
+                  id="tutorial-add-files"
                   type="file"
                   multiple
                   accept="image/*,.pdf,.doc,.docx,video/*"
@@ -935,8 +1355,19 @@ function App() {
             </h3>
 
             <input
+              id="tutorial-poi-name"
               value={poiName}
-              onChange={(e) => setPoiName(e.target.value)}
+              onChange={(e) => {
+                setPoiName(e.target.value);
+
+                if (
+                  tutorialMode &&
+                  tutorialStep === "poiName" &&
+                  e.target.value.trim().length > 0
+                ) {
+                  advanceTutorial("poiGroup");
+                }
+              }}
               placeholder={t.placeholders.poiName}
               style={{
                 padding: 8,
@@ -947,8 +1378,15 @@ function App() {
             />
 
             <select
+              id="tutorial-poi-group"
               value={poiCategory}
-              onChange={(e) => setPoiCategory(e.target.value)}
+              onChange={(e) => {
+                setPoiCategory(e.target.value);
+
+                if (tutorialMode && tutorialStep === "poiGroup") {
+                  advanceTutorial("poiDescription");
+                }
+              }}
               style={{
                 padding: 8,
                 width: "100%",
@@ -969,8 +1407,19 @@ function App() {
             </select>
 
             <textarea
+              id="tutorial-poi-description"
               value={poiDescription}
-              onChange={(e) => setPoiDescription(e.target.value)}
+              onChange={(e) => {
+                setPoiDescription(e.target.value);
+
+                if (
+                  tutorialMode &&
+                  tutorialStep === "poiDescription" &&
+                  e.target.value.trim().length > 0
+                ) {
+                  advanceTutorial("savePoi");
+                }
+              }}
               placeholder={t.placeholders.description}
               style={{
                 padding: 8,
@@ -981,7 +1430,7 @@ function App() {
             />
 
             <div style={{ marginTop: 10 }}>
-              <button onClick={savePOI}>{t.buttons.save}</button>
+              <button id="tutorial-save-poi" onClick={savePOI}>{t.buttons.save}</button>
               <button
                 onClick={() => {
                   setNewPoint(null);
@@ -1012,6 +1461,24 @@ function App() {
           
           {filteredPois.map((poi) => (
             <Marker
+              ref={(marker) => {
+                if (poi.id === tutorialPoiId && marker) {
+                  const element = marker.getElement();
+
+                  if (element) {
+                    element.id = "tutorial-created-marker";
+                  }
+                }
+              }}
+              eventHandlers={{
+                click: () => {
+                  if (tutorialMode && tutorialStep === "clickMarker") {
+                    if (poi.id !== tutorialPoiId) return;
+
+                    advanceTutorial("selectPoi");
+                  }
+                },
+              }}
               key={poi.id}
               position={[poi.lat, poi.lng]}
               icon={createColoredIcon(getMarkerColor(poi.category))}
@@ -1043,7 +1510,14 @@ function App() {
                   <br />
 
                   <button
-                    onClick={() => setSelectedPoi(poi)}
+                    id={poi.id === tutorialPoiId ? "tutorial-select-poi" : undefined}
+                    onClick={() => {
+                      setSelectedPoi(poi);
+
+                      if (tutorialMode && tutorialStep === "selectPoi") {
+                        advanceTutorial("addFiles");
+                      }
+                    }}
                     style={{
                       padding: "6px 10px",
                       marginTop: 10,
@@ -1060,6 +1534,17 @@ function App() {
           </>
         )}
       </div>
+      {tutorialMode && (
+        <TutorialOverlay
+          step={tutorialStep}
+          t={t}
+          onStart={() => setTutorialStep("clickMap")}
+          onFinish={() => {
+            setTutorialMode(false);
+            setTutorialStep("mapIntro");
+          }}
+        />
+      )}
     </div>
   );
 }
